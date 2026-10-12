@@ -5,7 +5,12 @@ local RunService = game:GetService("RunService")
 local Lighting   = game:GetService("Lighting")
 
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
+local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui", 10)
+
+local UIParent = PlayerGui
+pcall(function()
+    if gethui then UIParent = gethui() end
+end)
 
 local SafeInset = 60
 
@@ -68,7 +73,7 @@ end
 
 local function stroke(p,c,t,tr)
     local s=Instance.new("UIStroke"); s.Color=c or T.Bronze; s.Thickness=t or 1
-    s.Transparency=tr or 0.4; s.ApplyStrokeMode=Enum.ApplyStrokeMode.Border; s.Parent=p; return s
+    s.Transparency=tr or 0.4; s.Parent=p; return s
 end
 
 local function fmt(n)
@@ -179,29 +184,35 @@ end
 local TrainEvent   = findRemote("TrainEvent","Train")
 local RebirthEvent = findRemote("RebirthEvent","Rebirth")
 
-local old = PlayerGui:FindFirstChild("CrownMobileUI")
+local old = UIParent:FindFirstChild("CrownMobileUI")
 if old then old:Destroy() end
+if PlayerGui ~= UIParent then
+    local old2 = PlayerGui:FindFirstChild("CrownMobileUI")
+    if old2 then old2:Destroy() end
+end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CrownMobileUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.IgnoreGuiInset = true
-ScreenGui.DisplayOrder = 999
-ScreenGui.Parent = PlayerGui
+ScreenGui.DisplayOrder = 999999
+ScreenGui.Parent = UIParent
 
-local vp = workspace.CurrentCamera.ViewportSize
+local cam = workspace.CurrentCamera
+local vp = cam and cam.ViewportSize or Vector2.new(800, 600)
 local PW = math.min(vp.X*0.92, 380)
 local PH = math.min(vp.Y*0.85, 640)
 
 local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainPanel"
 MainFrame.Size = UDim2.new(0,PW,0,PH)
 MainFrame.Position = UDim2.new(0.5,-PW/2,0.5,-PH/2 + 10)
 MainFrame.BackgroundColor3 = T.BgDeep
 MainFrame.BorderSizePixel = 0
-MainFrame.ZIndex = 10
+MainFrame.ZIndex = 100
 MainFrame.Active = true
-MainFrame.Visible = false
+MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 corner(MainFrame,12); stroke(MainFrame,T.Bronze,2,0.3)
 
@@ -211,7 +222,7 @@ TitleLabel.Position = UDim2.new(0,14,0,8)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "力量之冠 · 雪花脚本"
 TitleLabel.Font = T.FB; TitleLabel.TextSize = 18
-TitleLabel.TextColor3 = T.TextGold; TitleLabel.ZIndex = 13
+TitleLabel.TextColor3 = T.TextGold; TitleLabel.ZIndex = 103
 TitleLabel.Parent = MainFrame
 
 local SubTitle = Instance.new("TextLabel")
@@ -220,7 +231,7 @@ SubTitle.Position = UDim2.new(0,14,0,36)
 SubTitle.BackgroundTransparency = 1
 SubTitle.Text = "忍者注入器专用版"
 SubTitle.Font = T.FM; SubTitle.TextSize = 11
-SubTitle.TextColor3 = T.TextCyan; SubTitle.ZIndex = 13
+SubTitle.TextColor3 = T.TextCyan; SubTitle.ZIndex = 103
 SubTitle.Parent = MainFrame
 
 local CloseBtn = Instance.new("TextButton")
@@ -229,7 +240,7 @@ CloseBtn.Position = UDim2.new(1,-42,0,10)
 CloseBtn.BackgroundColor3 = T.BgCard
 CloseBtn.Text = "关"; CloseBtn.Font = T.FB; CloseBtn.TextSize = 14
 CloseBtn.TextColor3 = T.TextGold; CloseBtn.BorderSizePixel = 0
-CloseBtn.ZIndex = 20; CloseBtn.Parent = MainFrame
+CloseBtn.ZIndex = 110; CloseBtn.Parent = MainFrame
 corner(CloseBtn,8); stroke(CloseBtn,T.Bronze,1,0.4)
 CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
@@ -237,7 +248,7 @@ local StatsFrame = Instance.new("Frame")
 StatsFrame.Size = UDim2.new(1,-24,0,72)
 StatsFrame.Position = UDim2.new(0,12,0,62)
 StatsFrame.BackgroundColor3 = T.BgCard
-StatsFrame.BorderSizePixel = 0; StatsFrame.ZIndex = 12
+StatsFrame.BorderSizePixel = 0; StatsFrame.ZIndex = 102
 StatsFrame.Parent = MainFrame
 corner(StatsFrame,8); stroke(StatsFrame,T.CyanDeep,1,0.5)
 
@@ -249,7 +260,7 @@ for i,def in ipairs(STAT_DEFS) do
     card.Size = UDim2.new(0,155,0,22)
     card.Position = UDim2.new(0,10+col*165,0,8+row*28)
     card.BackgroundColor3 = T.BgCard2
-    card.BorderSizePixel = 0; card.ZIndex = 13
+    card.BorderSizePixel = 0; card.ZIndex = 103
     card.Parent = StatsFrame
     corner(card,5); stroke(card,def.color,1,0.5)
 
@@ -259,7 +270,7 @@ for i,def in ipairs(STAT_DEFS) do
     nameLabel.BackgroundTransparency = 1
     nameLabel.Text = def.label
     nameLabel.Font = T.FM; nameLabel.TextSize = 11
-    nameLabel.TextColor3 = def.color; nameLabel.ZIndex = 14
+    nameLabel.TextColor3 = def.color; nameLabel.ZIndex = 104
     nameLabel.Parent = card
 
     local valLabel = Instance.new("TextLabel")
@@ -270,7 +281,7 @@ for i,def in ipairs(STAT_DEFS) do
     valLabel.Font = T.FB; valLabel.TextSize = 12
     valLabel.TextColor3 = T.Text
     valLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valLabel.ZIndex = 14
+    valLabel.ZIndex = 104
     valLabel.Parent = card
     statLabels[def.key] = valLabel
 end
@@ -283,7 +294,7 @@ Scroll.BorderSizePixel = 0
 Scroll.ScrollBarThickness = 4
 Scroll.ScrollBarColor3 = T.Bronze
 Scroll.ScrollBarTransparency = 0.5
-Scroll.ZIndex = 12
+Scroll.ZIndex = 102
 Scroll.Parent = MainFrame
 corner(Scroll,8); stroke(Scroll,T.BronzeDeep,1,0.5)
 
@@ -299,7 +310,7 @@ local function section(text)
     l.BackgroundTransparency = 1
     l.Text = "◆ "..text.." ◆"
     l.Font = T.FB; l.TextSize = 13
-    l.TextColor3 = T.TextGold; l.ZIndex = 13
+    l.TextColor3 = T.TextGold; l.ZIndex = 103
     l.Parent = Scroll
 end
 
@@ -307,7 +318,7 @@ local function makeSwitch(title, key, cb)
     local card = Instance.new("Frame")
     card.Size = UDim2.new(1,0,0,44)
     card.BackgroundColor3 = T.BgCard
-    card.BorderSizePixel = 0; card.ZIndex = 18
+    card.BorderSizePixel = 0; card.ZIndex = 108
     card.Parent = Scroll
     corner(card,8); stroke(card,T.Bronze,1,0.4)
 
@@ -319,7 +330,7 @@ local function makeSwitch(title, key, cb)
     lbl.Font = T.FM; lbl.TextSize = 13
     lbl.TextColor3 = T.Text
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.ZIndex = 19; lbl.Parent = card
+    lbl.ZIndex = 109; lbl.Parent = card
 
     local tg = Instance.new("TextButton")
     tg.Size = UDim2.new(0,36,0,22)
@@ -328,7 +339,7 @@ local function makeSwitch(title, key, cb)
     tg.Text = Config[key] and "启" or "闭"
     tg.Font = T.FB; tg.TextSize = 12
     tg.TextColor3 = Config[key] and T.Jade or T.TextDim
-    tg.BorderSizePixel = 0; tg.ZIndex = 20
+    tg.BorderSizePixel = 0; tg.ZIndex = 110
     tg.Parent = card
     corner(tg,6); stroke(tg, Config[key] and T.Jade or T.BronzeDeep,1,0)
 
@@ -346,7 +357,7 @@ local function makeNumber(title, key, min, max)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1,0,0,44)
     row.BackgroundColor3 = T.BgCard
-    row.BorderSizePixel = 0; row.ZIndex = 18
+    row.BorderSizePixel = 0; row.ZIndex = 108
     row.Parent = Scroll
     corner(row,8); stroke(row,T.Bronze,1,0.4)
 
@@ -358,7 +369,7 @@ local function makeNumber(title, key, min, max)
     lbl.Font = T.FM; lbl.TextSize = 13
     lbl.TextColor3 = T.Text
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.ZIndex = 19; lbl.Parent = row
+    lbl.ZIndex = 109; lbl.Parent = row
 
     local box = Instance.new("TextBox")
     box.Size = UDim2.new(0.5,-12,0,32)
@@ -368,7 +379,7 @@ local function makeNumber(title, key, min, max)
     box.Font = T.FN; box.TextSize = 13
     box.TextColor3 = T.TextGold
     box.ClearTextOnFocus = false
-    box.BorderSizePixel = 0; box.ZIndex = 20
+    box.BorderSizePixel = 0; box.ZIndex = 110
     box.Parent = row
     corner(box,6); stroke(box,T.BronzeDeep,1,0.4)
 
@@ -578,7 +589,7 @@ StartBtn.BackgroundColor3 = T.JadeDeep
 StartBtn.Text = "开始修行"
 StartBtn.Font = T.FB; StartBtn.TextSize = 15
 StartBtn.TextColor3 = T.Jade; StartBtn.BorderSizePixel = 0
-StartBtn.ZIndex = 14; StartBtn.Parent = MainFrame
+StartBtn.ZIndex = 104; StartBtn.Parent = MainFrame
 corner(StartBtn,8); stroke(StartBtn,T.Jade,2,0)
 StartBtn.MouseButton1Click:Connect(function()
     if isTraining then stopTrain() else startTrain() end
@@ -590,7 +601,7 @@ StatusLabel.Position = UDim2.new(0,12,1,-100)
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.Text = "待机"
 StatusLabel.Font = T.FM; StatusLabel.TextSize = 12
-StatusLabel.TextColor3 = T.TextDim; StatusLabel.ZIndex = 13
+StatusLabel.TextColor3 = T.TextDim; StatusLabel.ZIndex = 103
 StatusLabel.Parent = MainFrame
 
 SessionLabel = Instance.new("TextLabel")
@@ -599,7 +610,7 @@ SessionLabel.Position = UDim2.new(0,12,1,-80)
 SessionLabel.BackgroundTransparency = 1
 SessionLabel.Text = "本层: 0 次 | 力量: 0"
 SessionLabel.Font = T.FM; SessionLabel.TextSize = 11
-SessionLabel.TextColor3 = T.TextCyan; SessionLabel.ZIndex = 13
+SessionLabel.TextColor3 = T.TextCyan; SessionLabel.ZIndex = 103
 SessionLabel.Parent = MainFrame
 
 FpsLabel = Instance.new("TextLabel")
@@ -608,7 +619,7 @@ FpsLabel.Position = UDim2.new(0,12,1,-60)
 FpsLabel.BackgroundTransparency = 1
 FpsLabel.Text = "FPS: --"
 FpsLabel.Font = T.FN; FpsLabel.TextSize = 11
-FpsLabel.TextColor3 = T.TextDim; FpsLabel.ZIndex = 13
+FpsLabel.TextColor3 = T.TextDim; FpsLabel.ZIndex = 103
 FpsLabel.Parent = MainFrame
 
 JoyFrame = Instance.new("Frame")
@@ -617,7 +628,7 @@ JoyFrame.Position = UDim2.new(0, SafeInset, 1, -(120 + SafeInset))
 JoyFrame.BackgroundColor3 = T.BgCard
 JoyFrame.BorderSizePixel = 0
 JoyFrame.Visible = false
-JoyFrame.ZIndex = 50
+JoyFrame.ZIndex = 150
 JoyFrame.Parent = ScreenGui
 corner(JoyFrame,60); stroke(JoyFrame,T.Bronze,2,0.3)
 
@@ -626,7 +637,7 @@ JoyKnob.Size = UDim2.new(0,54,0,54)
 JoyKnob.Position = UDim2.new(0.5,-27,0.5,-27)
 JoyKnob.BackgroundColor3 = T.Bronze
 JoyKnob.BorderSizePixel = 0
-JoyKnob.ZIndex = 53
+JoyKnob.ZIndex = 153
 JoyKnob.Parent = JoyFrame
 corner(JoyKnob,27); stroke(JoyKnob,T.BronzeLight,2,0)
 
@@ -637,7 +648,7 @@ UpBtn.BackgroundColor3 = T.BgCard
 UpBtn.Text = "升"
 UpBtn.Font = T.FB; UpBtn.TextSize = 14
 UpBtn.TextColor3 = T.Jade; UpBtn.BorderSizePixel = 0
-UpBtn.ZIndex = 52; UpBtn.Visible = false
+UpBtn.ZIndex = 152; UpBtn.Visible = false
 UpBtn.Parent = ScreenGui
 corner(UpBtn,10); stroke(UpBtn,T.Jade,1,0.4)
 
@@ -648,22 +659,9 @@ DownBtn.BackgroundColor3 = T.BgCard
 DownBtn.Text = "降"
 DownBtn.Font = T.FB; DownBtn.TextSize = 14
 DownBtn.TextColor3 = T.Red; DownBtn.BorderSizePixel = 0
-DownBtn.ZIndex = 52; DownBtn.Visible = false
+DownBtn.ZIndex = 152; DownBtn.Visible = false
 DownBtn.Parent = ScreenGui
 corner(DownBtn,10); stroke(DownBtn,T.Red,1,0.4)
-
-local BallBtn = Instance.new("TextButton")
-BallBtn.Size = UDim2.new(0,56,0,56)
-BallBtn.Position = UDim2.new(1, -(56 + SafeInset), 1, -(56 + SafeInset))
-BallBtn.BackgroundColor3 = T.BgCard
-BallBtn.Text = "玄"
-BallBtn.Font = T.FB; BallBtn.TextSize = 16
-BallBtn.TextColor3 = T.TextGold; BallBtn.BorderSizePixel = 0
-BallBtn.ZIndex = 14; BallBtn.Parent = ScreenGui
-corner(BallBtn,28); stroke(BallBtn,T.Bronze,2,0.3)
-BallBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
 
 local function joyBegin(i)
     if i.UserInputType == Enum.UserInputType.Touch
@@ -750,12 +748,12 @@ RunService.RenderStepped:Connect(function()
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp or not flyBV or not flyBG then return end
-    local cam = workspace.CurrentCamera
-    if not cam then return end
+    local cam2 = workspace.CurrentCamera
+    if not cam2 then return end
 
     local dir = Vector3.zero
     if joyValue.Magnitude > 0.1 then
-        dir = cam.CFrame.LookVector * (-joyValue.Y) + cam.CFrame.RightVector * joyValue.X
+        dir = cam2.CFrame.LookVector * (-joyValue.Y) + cam2.CFrame.RightVector * joyValue.X
     end
     if flyUp then dir = dir + Vector3.new(0,1,0) end
     if flyDown then dir = dir - Vector3.new(0,1,0) end
@@ -766,62 +764,12 @@ RunService.RenderStepped:Connect(function()
         dir = dir.Unit * speed * st
     end
     flyBV.Velocity = dir
-    flyBG.CFrame = CFrame.new(hrp.Position, hrp.Position + cam.CFrame.LookVector)
+    flyBG.CFrame = CFrame.new(hrp.Position, hrp.Position + cam2.CFrame.LookVector)
 end)
 
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(0.5)
     applyMoveStats()
-    if flying then
-        flying = false
-        if flyBV then flyBV:Destroy(); flyBV = nil end
-        if flyBG then flyBG:Destroy(); flyBG = nil end
-        JoyFrame.Visible = false
-        UpBtn.Visible = false
-        DownBtn.Visible = false
-        if Config.Fly then
-            local char = LocalPlayer.Character
-            if char then
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hrp then
-                    if hum then hum.PlatformStand = true end
-                    flyBV = Instance.new("BodyVelocity")
-                    flyBV.MaxForce = Vector3.new(1e5,1e5,1e5)
-                    flyBV.Velocity = Vector3.zero
-                    flyBV.Parent = hrp
-                    flyBG = Instance.new("BodyGyro")
-                    flyBG.MaxTorque = Vector3.new(1e5,1e5,1e5)
-                    flyBG.P = 3000; flyBG.D = 500
-                    flyBG.Parent = hrp
-                    flying = true
-                    JoyFrame.Visible = true
-                    UpBtn.Visible = true
-                    DownBtn.Visible = true
-                end
-            end
-        end
-    end
-end)
-
-local fallDamageApplied = false
-RunService.Heartbeat:Connect(function()
-    if not Config.NoFallDamage then return end
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum and hum.Health > 0 then
-        hum.FallDamagePerFoot = 0
-        if not fallDamageApplied then
-            fallDamageApplied = true
-            pcall(function()
-                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-            end)
-        end
-    else
-        fallDamageApplied = false
-    end
 end)
 
 local frameCount = 0
@@ -864,30 +812,4 @@ end)
 updateStartBtn()
 updateStatus()
 applyMoveStats()
-if Config.Fly then
-    task.defer(function()
-        local char = LocalPlayer.Character
-        if char then
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hrp then
-                if hum then hum.PlatformStand = true end
-                flyBV = Instance.new("BodyVelocity")
-                flyBV.MaxForce = Vector3.new(1e5,1e5,1e5)
-                flyBV.Velocity = Vector3.zero
-                flyBV.Parent = hrp
-                flyBG = Instance.new("BodyGyro")
-                flyBG.MaxTorque = Vector3.new(1e5,1e5,1e5)
-                flyBG.P = 3000; flyBG.D = 500
-                flyBG.Parent = hrp
-                flying = true
-                JoyFrame.Visible = true
-                UpBtn.Visible = true
-                DownBtn.Visible = true
-            end
-        end
-    end)
-end
 if Config.UseAllActions and TrainEvent then task.defer(startTrain) end
-
-print("[雪花脚本] 忍者注入器专用版加载完成")
