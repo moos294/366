@@ -17,11 +17,6 @@ local Config = {
     Fly = false, FlySpeed = 50, WalkSpeed = 16,
     AutoRebirthCount = 0, AutoRebirthDone = 0,
     DataPanelOpen = false,
-    EggMaxBackpack = 256, EggStopWhenFull = true,
-    SkyEggAuto = false, SkyEggInterval = 1, SkyEggTotal = 0,
-    LavaEggAuto = false, LavaEggInterval = 1, LavaEggTotal = 0,
-    SandEggAuto = false, SandEggInterval = 1, SandEggTotal = 0,
-    JungleEggAuto = false, JungleEggInterval = 1, JungleEggTotal = 0,
 }
 
 local Actions = { "PushUp", "SitUp", "PullUp", "Squat" }
@@ -32,20 +27,6 @@ local MIN_W, MIN_H, MAX_W, MAX_H = 260, 260, 420, 600
 local COLLAPSED = 44
 local IS_TOUCH = UserInputService.TouchEnabled
 local REBIRTH_TIMEOUT = 15
-
-local MIN_LOOP_WAIT = 0.05
-local function safeWait(t)
-    task.wait(math.max(MIN_LOOP_WAIT, tonumber(t) or MIN_LOOP_WAIT))
-end
-
-local EGG_DEFS = {
-    sky    = { name = "SkyPetEgg",    count = 5, currency = "Gem", label = "天空蛋" },
-    lava   = { name = "LavaPetEgg",   count = 5, currency = "Gem", label = "岩浆蛋" },
-    sand   = { name = "SandPetEgg",   count = 5, currency = "Gem", label = "沙漠蛋" },
-    jungle = { name = "JunglePetEgg", count = 5, currency = "Gem", label = "主岛蛋" },
-}
-
-local EGG_KEYS = { "SkyEggAuto", "LavaEggAuto", "SandEggAuto", "JungleEggAuto" }
 
 local function findRemote(name, alt)
     local list = { ReplicatedStorage }
@@ -59,7 +40,6 @@ end
 
 local TrainEvent = findRemote("TrainEvent", "Train")
 local RebirthEvent = findRemote("RebirthEvent", "Rebirth")
-local StoreEvent = findRemote("StoreEvent", "Store")
 
 local function saveConfig()
     if not Config.SaveSettings or type(writefile) ~= "function" then return end
@@ -84,40 +64,6 @@ local function loadConfig()
 end
 loadConfig()
 
-local function clampConfig()
-    Config.Interval          = math.clamp(tonumber(Config.Interval)          or 0.1,  MIN_INTERVAL, MAX_INTERVAL)
-    Config.SkyEggInterval    = math.clamp(tonumber(Config.SkyEggInterval)    or 1,    0.1, 30)
-    Config.LavaEggInterval   = math.clamp(tonumber(Config.LavaEggInterval)   or 1,    0.1, 30)
-    Config.SandEggInterval   = math.clamp(tonumber(Config.SandEggInterval)   or 1,    0.1, 30)
-    Config.JungleEggInterval = math.clamp(tonumber(Config.JungleEggInterval) or 1,    0.1, 30)
-    Config.AutoRebirthDelay  = math.clamp(tonumber(Config.AutoRebirthDelay)  or 3,    0.5, 600)
-    Config.AutoResetInterval = math.clamp(tonumber(Config.AutoResetInterval) or 300,  10, 86400)
-    Config.WalkSpeed         = math.clamp(tonumber(Config.WalkSpeed)         or 16,   16, 500)
-    Config.FlySpeed          = math.clamp(tonumber(Config.FlySpeed)          or 50,   10, 500)
-    Config.EggMaxBackpack    = math.clamp(tonumber(Config.EggMaxBackpack)    or 256,  1, 99999)
-    Config.AutoRebirthCount  = math.clamp(tonumber(Config.AutoRebirthCount)  or 0,    0, 99999)
-    Config.AutoRebirthDone   = math.clamp(tonumber(Config.AutoRebirthDone)   or 0,    0, 99999)
-    Config.TotalReps         = math.max(0, tonumber(Config.TotalReps) or 0)
-    Config.SkyEggTotal       = math.max(0, tonumber(Config.SkyEggTotal) or 0)
-    Config.LavaEggTotal      = math.max(0, tonumber(Config.LavaEggTotal) or 0)
-    Config.SandEggTotal      = math.max(0, tonumber(Config.SandEggTotal) or 0)
-    Config.JungleEggTotal    = math.max(0, tonumber(Config.JungleEggTotal) or 0)
-end
-clampConfig()
-
-do
-    local firstOn = nil
-    for _, k in ipairs(EGG_KEYS) do
-        if Config[k] then
-            if firstOn == nil then
-                firstOn = k
-            else
-                Config[k] = false
-            end
-        end
-    end
-end
-
 local T = {
     BgDeep   = Color3.fromRGB(4, 7, 12),
     BgPanel  = Color3.fromRGB(10, 16, 24),
@@ -134,14 +80,6 @@ local T = {
     RedDim   = Color3.fromRGB(180, 30, 60),
     Yellow   = Color3.fromRGB(255, 220, 80),
     Purple   = Color3.fromRGB(180, 120, 255),
-    Sky      = Color3.fromRGB(96, 200, 255),
-    SkyDark  = Color3.fromRGB(40, 130, 200),
-    Lava     = Color3.fromRGB(255, 90, 50),
-    LavaDark = Color3.fromRGB(180, 40, 20),
-    Sand     = Color3.fromRGB(240, 200, 120),
-    SandDark = Color3.fromRGB(180, 130, 40),
-    Jungle   = Color3.fromRGB(120, 220, 130),
-    JungleDark = Color3.fromRGB(60, 150, 80),
     Text     = Color3.fromRGB(220, 235, 255),
     TextDim  = Color3.fromRGB(110, 140, 180),
     TextSub  = Color3.fromRGB(70, 95, 130),
@@ -178,9 +116,7 @@ end
 local function gradientMulti(p, list, rot)
     local g = Instance.new("UIGradient")
     local cs = {}
-    for _, c in ipairs(list) do
-        table.insert(cs, ColorSequenceKeypoint.new(c[1], c[2]))
-    end
+    for _, c in ipairs(list) do table.insert(cs, ColorSequenceKeypoint.new(c[1], c[2])) end
     g.Color = ColorSequence.new(cs)
     g.Rotation = rot or 90
     g.Parent = p
@@ -208,26 +144,28 @@ local function cornerBrackets(parent, color, size, thickness)
     color = color or T.Neon
     size = size or 8
     thickness = thickness or 2
-
-    local function makeFrame(pos, sz)
-        local f = Instance.new("Frame")
-        f.Position = pos
-        f.Size = sz
-        f.BackgroundColor3 = color
-        f.BorderSizePixel = 0
-        f.ZIndex = 10
-        f.Parent = parent
-        return f
+    local data = {
+        {0, 0, 1, 0, 0, 0}, {1, -size, 0, 0, 1, 0},
+        {0, 0, 0, 1, 0, 0}, {1, -size, 1, -size, 0, 1},
+    }
+    for _, d in ipairs(data) do
+        local h = Instance.new("Frame")
+        h.Size = UDim2.new(0, size, 0, thickness)
+        h.Position = UDim2.new(d[1], d[2], d[3], d[4])
+        h.BackgroundColor3 = color
+        h.BorderSizePixel = 0
+        h.ZIndex = 10
+        h.Parent = parent
     end
-
-    makeFrame(UDim2.new(0, 0, 0, 0),               UDim2.new(0, size, 0, thickness))
-    makeFrame(UDim2.new(0, 0, 0, 0),               UDim2.new(0, thickness, 0, size))
-    makeFrame(UDim2.new(1, -size, 0, 0),           UDim2.new(0, size, 0, thickness))
-    makeFrame(UDim2.new(1, -thickness, 0, 0),      UDim2.new(0, thickness, 0, size))
-    makeFrame(UDim2.new(0, 0, 1, -thickness),      UDim2.new(0, size, 0, thickness))
-    makeFrame(UDim2.new(0, 0, 1, -size),           UDim2.new(0, thickness, 0, size))
-    makeFrame(UDim2.new(1, -size, 1, -thickness),  UDim2.new(0, size, 0, thickness))
-    makeFrame(UDim2.new(1, -thickness, 1, -size),  UDim2.new(0, thickness, 0, size))
+    for _, d in ipairs(data) do
+        local v = Instance.new("Frame")
+        v.Size = UDim2.new(0, thickness, 0, size)
+        v.Position = UDim2.new(d[5], d[6], d[3], d[4])
+        v.BackgroundColor3 = color
+        v.BorderSizePixel = 0
+        v.ZIndex = 10
+        v.Parent = parent
+    end
 end
 
 local function addGrid(parent, maxX, maxY)
@@ -266,10 +204,6 @@ local startTime, isCollapsed, savedSize = 0, false, nil
 local sessionStartStrength = nil
 local flying, flyBV, flyBG = false, nil, nil
 local flySpeed = Config.FlySpeed or 50
-local skyEggTotal = tonumber(Config.SkyEggTotal) or 0
-local lavaEggTotal = tonumber(Config.LavaEggTotal) or 0
-local sandEggTotal = tonumber(Config.SandEggTotal) or 0
-local jungleEggTotal = tonumber(Config.JungleEggTotal) or 0
 local startAutoTrain, stopAutoTrain, updateStatus, updateStartBtn, collapse, expand
 local startFly, stopFly, applyWalkSpeed
 local updateRebirthDisplay
@@ -278,21 +212,6 @@ local DataPanelOpen = Config.DataPanelOpen or false
 local pendingRebirth = false
 local pendingRebirthStart = 0
 local pendingRebirthLastValue = 0
-
-local EggToggleRefs = {}
-
-local function closeOtherEggs(keepKey)
-    for _, k in ipairs(EGG_KEYS) do
-        if k ~= keepKey and Config[k] then
-            Config[k] = false
-            local ref = EggToggleRefs[k]
-            if ref and ref.refresh then
-                ref.refresh()
-            end
-        end
-    end
-    saveConfig()
-end
 
 local MobileInput = { Forward = false, Back = false, Left = false, Right = false, Up = false, Down = false }
 
@@ -372,32 +291,11 @@ local function refreshAllStats()
     end
 end
 
-local function getBackpackCount()
-    local count = 0
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
-    if backpack then
-        count = count + #backpack:GetChildren()
-    end
-    local char = LocalPlayer.Character
-    if char then
-        local charCount = 0
-        for _, child in ipairs(char:GetChildren()) do
-            if child:IsA("Tool") then charCount = charCount + 1 end
-        end
-        count = count + charCount
-    end
-    return count
-end
-
-local function isBackpackFull()
-    if not Config.EggStopWhenFull then return false end
-    local maxCap = Config.EggMaxBackpack
-    if not maxCap or maxCap <= 0 then return false end
-    return getBackpackCount() >= maxCap
-end
-
--- ✅ 忍者注入器专用：强制 PlayerGui 挂载 + 显式 Enabled + 高 DisplayOrder
-local parentGui = PlayerGui
+local parentGui
+pcall(function()
+    if type(gethui) == "function" then parentGui = gethui() end
+end)
+if not parentGui then parentGui = PlayerGui end
 
 local old = parentGui:FindFirstChild("CrownStrengthUI")
 if old then old:Destroy() end
@@ -407,17 +305,7 @@ ScreenGui.Name = "CrownStrengthUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.IgnoreGuiInset = true
-ScreenGui.Enabled = true              -- ✅ 显式启用
-ScreenGui.DisplayOrder = 999          -- ✅ 最高显示优先级
 ScreenGui.Parent = parentGui
-
--- ✅ 挂载验证：如果第一次没挂上，延迟重试
-task.defer(function()
-    task.wait(0.1)
-    if not ScreenGui.Parent then
-        ScreenGui.Parent = PlayerGui
-    end
-end)
 
 local W, H = 280, 300
 
@@ -516,7 +404,7 @@ local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(0, 100, 0, 10)
 SubTitle.Position = UDim2.new(0, 38, 0, 19)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "// v4.0"
+SubTitle.Text = "// v1.0"
 SubTitle.TextColor3 = T.Neon
 SubTitle.TextXAlignment = Enum.TextXAlignment.Left
 SubTitle.Font = T.FM
@@ -573,7 +461,7 @@ local MinBtn = headerButton("◆", T.NeonDim, -52, T.Neon)
 local DataBtn = headerButton("▤", T.NeonDim, -76, T.Neon)
 
 local Content = Instance.new("ScrollingFrame")
-Content.Size = UDim2.new(1, 0, 1, -72)
+Content.Size = UDim2.new(1, 0, 1, -36 - 36)
 Content.Position = UDim2.new(0, 0, 0, 36)
 Content.BackgroundTransparency = 1
 Content.BorderSizePixel = 0
@@ -791,25 +679,10 @@ local function toggleRow(parent, labelText, key, onToggle)
             Config[key] = false
             notify("未找到重生事件", T.Red)
         end
-        if (key == "SkyEggAuto" or key == "LavaEggAuto" or key == "SandEggAuto" or key == "JungleEggAuto")
-            and Config[key] and not StoreEvent then
-            Config[key] = false
-            notify("未找到开蛋事件", T.Red)
-        end
-
         refresh()
-
-        if (key == "SkyEggAuto" or key == "LavaEggAuto" or key == "SandEggAuto" or key == "JungleEggAuto") then
-            if Config[key] then
-                closeOtherEggs(key)
-            end
-        end
-
         if onToggle then onToggle(Config[key]) end
         saveConfig()
     end)
-
-    return { switch = switch, refresh = refresh }
 end
 
 local function numberInput(parent, labelText, key, minV, maxV, onChange)
@@ -857,55 +730,6 @@ local function numberInput(parent, labelText, key, minV, maxV, onChange)
         else
             box.Text = tostring(Config[key])
             notify(string.format("范围 %d ~ %d", minV, maxV), T.Red)
-        end
-    end)
-end
-
-local function floatInput(parent, labelText, key, minV, maxV, onChange)
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 22)
-    row.BackgroundTransparency = 1
-    row.Parent = parent
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(0, 58, 1, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = labelText
-    lbl.TextColor3 = T.TextDim
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Font = T.F
-    lbl.TextSize = 9
-    lbl.Parent = row
-
-    local box = Instance.new("TextBox")
-    box.Size = UDim2.new(1, -58, 1, 0)
-    box.Position = UDim2.new(0, 58, 0, 0)
-    box.BackgroundColor3 = T.BgPanel2
-    box.Text = tostring(Config[key])
-    box.TextColor3 = T.Neon
-    box.PlaceholderColor3 = T.TextDim
-    box.Font = T.FM
-    box.TextSize = 10
-    box.ClearTextOnFocus = false
-    box.BorderSizePixel = 0
-    box.Parent = row
-    corner(box, 3)
-    stroke(box, T.Stroke, 1, 0.3)
-
-    box.Focused:Connect(function()
-        tween(box, { BackgroundColor3 = T.BgPanelHi }, 0.15)
-    end)
-    box.FocusLost:Connect(function()
-        tween(box, { BackgroundColor3 = T.BgPanel2 }, 0.15)
-        local n = tonumber(box.Text)
-        if n and n >= minV and n <= maxV then
-            box.Text = tostring(n)
-            Config[key] = n
-            if onChange then onChange(n) end
-            saveConfig()
-        else
-            box.Text = tostring(Config[key])
-            notify(string.format("范围 %.2f ~ %.2f", minV, maxV), T.Red)
         end
     end)
 end
@@ -1146,464 +970,6 @@ end
 
 startBtn.MouseEnter:Connect(function() tween(startBtn, { BackgroundTransparency = 0.15 }, 0.15) end)
 startBtn.MouseLeave:Connect(function() tween(startBtn, { BackgroundTransparency = 0 }, 0.15) end)
-
-local skyEggCard = accordionCard("◆ 天空蛋 X5 抽取", T.Sky, false)
-
-local skyParamRow = Instance.new("Frame")
-skyParamRow.Size = UDim2.new(1, 0, 0, 28)
-skyParamRow.BackgroundColor3 = T.BgPanel2
-skyParamRow.BackgroundTransparency = 0.4
-skyParamRow.Parent = skyEggCard
-corner(skyParamRow, 4)
-stroke(skyParamRow, T.Sky, 1.2, 0.3)
-
-local skyParamIcon = Instance.new("TextLabel")
-skyParamIcon.Size = UDim2.new(0, 24, 1, 0)
-skyParamIcon.Position = UDim2.new(0, 6, 0, 0)
-skyParamIcon.BackgroundTransparency = 1
-skyParamIcon.Text = "🥚"
-skyParamIcon.TextColor3 = T.Sky
-skyParamIcon.Font = T.FB
-skyParamIcon.TextSize = 14
-skyParamIcon.Parent = skyParamRow
-
-local skyParamLbl = Instance.new("TextLabel")
-skyParamLbl.Size = UDim2.new(1, -36, 1, 0)
-skyParamLbl.Position = UDim2.new(0, 30, 0, 0)
-skyParamLbl.BackgroundTransparency = 1
-skyParamLbl.Text = "SkyPetEgg × 5  ·  货币: Gem"
-skyParamLbl.TextColor3 = T.Sky
-skyParamLbl.TextXAlignment = Enum.TextXAlignment.Left
-skyParamLbl.Font = T.FM
-skyParamLbl.TextSize = 10
-skyParamLbl.Parent = skyParamRow
-
-EggToggleRefs.SkyEggAuto = toggleRow(skyEggCard, "自动开蛋", "SkyEggAuto")
-floatInput(skyEggCard, "间隔(秒)", "SkyEggInterval", 0.1, 30)
-
-local skyEggTotalLbl = infoRow(skyEggCard, "累计开蛋", T.Sky)
-
-local skyEggOpenBtn = Instance.new("TextButton")
-skyEggOpenBtn.Size = UDim2.new(1, 0, 0, 26)
-skyEggOpenBtn.BackgroundColor3 = T.Sky
-skyEggOpenBtn.Text = "🥚  立即抽取一次 (× 5)"
-skyEggOpenBtn.TextColor3 = T.BgDeep
-skyEggOpenBtn.Font = T.FB
-skyEggOpenBtn.TextSize = 11
-skyEggOpenBtn.AutoButtonColor = false
-skyEggOpenBtn.BorderSizePixel = 0
-skyEggOpenBtn.Parent = skyEggCard
-corner(skyEggOpenBtn, 4)
-gradientMulti(skyEggOpenBtn, {
-    {0, Color3.fromRGB(150, 220, 255)},
-    {1, T.SkyDark},
-}, 90)
-stroke(skyEggOpenBtn, T.Sky, 1.2, 0.2)
-
-skyEggOpenBtn.MouseEnter:Connect(function() tween(skyEggOpenBtn, { BackgroundTransparency = 0.15 }, 0.15) end)
-skyEggOpenBtn.MouseLeave:Connect(function() tween(skyEggOpenBtn, { BackgroundTransparency = 0 }, 0.15) end)
-
-local skyEggResetBtn = Instance.new("TextButton")
-skyEggResetBtn.Size = UDim2.new(1, 0, 0, 20)
-skyEggResetBtn.BackgroundColor3 = T.BgPanel2
-skyEggResetBtn.Text = "⟲  重置开蛋计数"
-skyEggResetBtn.TextColor3 = T.Red
-skyEggResetBtn.Font = T.FM
-skyEggResetBtn.TextSize = 9
-skyEggResetBtn.AutoButtonColor = false
-skyEggResetBtn.BorderSizePixel = 0
-skyEggResetBtn.Parent = skyEggCard
-corner(skyEggResetBtn, 3)
-stroke(skyEggResetBtn, T.Red, 1, 0.4)
-
-skyEggResetBtn.MouseEnter:Connect(function() tween(skyEggResetBtn, { BackgroundColor3 = T.BgPanelHi }, 0.15) end)
-skyEggResetBtn.MouseLeave:Connect(function() tween(skyEggResetBtn, { BackgroundColor3 = T.BgPanel2 }, 0.15) end)
-
-skyEggResetBtn.MouseButton1Click:Connect(function()
-    skyEggTotal = 0
-    Config.SkyEggTotal = 0
-    saveConfig()
-    skyEggTotalLbl.Text = "0"
-    notify("天空蛋计数已重置", T.Neon)
-end)
-
-skyEggTotalLbl.Text = tostring(skyEggTotal)
-
-local function fireSkyEgg(silent)
-    if not StoreEvent then
-        if not silent then notify("未找到开蛋事件", T.Red) end
-        return false
-    end
-    if isBackpackFull() then
-        if not silent then notify("背包已满，无法开蛋", T.Red) end
-        return false
-    end
-    local ok = pcall(function()
-        StoreEvent:FireServer("Egg", EGG_DEFS.sky.count, EGG_DEFS.sky.currency, EGG_DEFS.sky.name)
-    end)
-    if ok then
-        skyEggTotal = skyEggTotal + EGG_DEFS.sky.count
-        Config.SkyEggTotal = skyEggTotal
-        skyEggTotalLbl.Text = tostring(skyEggTotal)
-        saveConfig()
-    end
-    return ok
-end
-
-skyEggOpenBtn.MouseButton1Click:Connect(function()
-    if fireSkyEgg() then
-        notify("已抽取天空蛋 × " .. EGG_DEFS.sky.count, T.Sky)
-    end
-end)
-
-local bpDivider = Instance.new("Frame")
-bpDivider.Size = UDim2.new(1, 0, 0, 1)
-bpDivider.BackgroundColor3 = T.Sky
-bpDivider.BackgroundTransparency = 0.7
-bpDivider.BorderSizePixel = 0
-bpDivider.Parent = skyEggCard
-
-local bpTitle = Instance.new("TextLabel")
-bpTitle.Size = UDim2.new(1, 0, 0, 12)
-bpTitle.BackgroundTransparency = 1
-bpTitle.Text = "› 背包共享设置"
-bpTitle.TextColor3 = T.Sky
-bpTitle.TextXAlignment = Enum.TextXAlignment.Left
-bpTitle.Font = T.FB
-bpTitle.TextSize = 8
-bpTitle.Parent = skyEggCard
-
-toggleRow(skyEggCard, "背包满自动停", "EggStopWhenFull")
-numberInput(skyEggCard, "背包上限", "EggMaxBackpack", 1, 99999)
-
-local backpackLbl = infoRow(skyEggCard, "背包占用", T.Green)
-
-local lavaEggCard = accordionCard("◆ 岩浆蛋 X5 抽取", T.Lava, false)
-
-local lavaParamRow = Instance.new("Frame")
-lavaParamRow.Size = UDim2.new(1, 0, 0, 28)
-lavaParamRow.BackgroundColor3 = T.BgPanel2
-lavaParamRow.BackgroundTransparency = 0.4
-lavaParamRow.Parent = lavaEggCard
-corner(lavaParamRow, 4)
-stroke(lavaParamRow, T.Lava, 1.2, 0.3)
-
-local lavaParamIcon = Instance.new("TextLabel")
-lavaParamIcon.Size = UDim2.new(0, 24, 1, 0)
-lavaParamIcon.Position = UDim2.new(0, 6, 0, 0)
-lavaParamIcon.BackgroundTransparency = 1
-lavaParamIcon.Text = "🌋"
-lavaParamIcon.TextColor3 = T.Lava
-lavaParamIcon.Font = T.FB
-lavaParamIcon.TextSize = 14
-lavaParamIcon.Parent = lavaParamRow
-
-local lavaParamLbl = Instance.new("TextLabel")
-lavaParamLbl.Size = UDim2.new(1, -36, 1, 0)
-lavaParamLbl.Position = UDim2.new(0, 30, 0, 0)
-lavaParamLbl.BackgroundTransparency = 1
-lavaParamLbl.Text = "LavaPetEgg × 5  ·  货币: Gem"
-lavaParamLbl.TextColor3 = T.Lava
-lavaParamLbl.TextXAlignment = Enum.TextXAlignment.Left
-lavaParamLbl.Font = T.FM
-lavaParamLbl.TextSize = 10
-lavaParamLbl.Parent = lavaParamRow
-
-EggToggleRefs.LavaEggAuto = toggleRow(lavaEggCard, "自动开蛋", "LavaEggAuto")
-floatInput(lavaEggCard, "间隔(秒)", "LavaEggInterval", 0.1, 30)
-
-local lavaEggTotalLbl = infoRow(lavaEggCard, "累计开蛋", T.Lava)
-
-local lavaEggOpenBtn = Instance.new("TextButton")
-lavaEggOpenBtn.Size = UDim2.new(1, 0, 0, 26)
-lavaEggOpenBtn.BackgroundColor3 = T.Lava
-lavaEggOpenBtn.Text = "🌋  立即抽取一次 (× 5)"
-lavaEggOpenBtn.TextColor3 = T.BgDeep
-lavaEggOpenBtn.Font = T.FB
-lavaEggOpenBtn.TextSize = 11
-lavaEggOpenBtn.AutoButtonColor = false
-lavaEggOpenBtn.BorderSizePixel = 0
-lavaEggOpenBtn.Parent = lavaEggCard
-corner(lavaEggOpenBtn, 4)
-gradientMulti(lavaEggOpenBtn, {
-    {0, Color3.fromRGB(255, 150, 100)},
-    {1, T.LavaDark},
-}, 90)
-stroke(lavaEggOpenBtn, T.Lava, 1.2, 0.2)
-
-lavaEggOpenBtn.MouseEnter:Connect(function() tween(lavaEggOpenBtn, { BackgroundTransparency = 0.15 }, 0.15) end)
-lavaEggOpenBtn.MouseLeave:Connect(function() tween(lavaEggOpenBtn, { BackgroundTransparency = 0 }, 0.15) end)
-
-local lavaEggResetBtn = Instance.new("TextButton")
-lavaEggResetBtn.Size = UDim2.new(1, 0, 0, 20)
-lavaEggResetBtn.BackgroundColor3 = T.BgPanel2
-lavaEggResetBtn.Text = "⟲  重置开蛋计数"
-lavaEggResetBtn.TextColor3 = T.Red
-lavaEggResetBtn.Font = T.FM
-lavaEggResetBtn.TextSize = 9
-lavaEggResetBtn.AutoButtonColor = false
-lavaEggResetBtn.BorderSizePixel = 0
-lavaEggResetBtn.Parent = lavaEggCard
-corner(lavaEggResetBtn, 3)
-stroke(lavaEggResetBtn, T.Red, 1, 0.4)
-
-lavaEggResetBtn.MouseEnter:Connect(function() tween(lavaEggResetBtn, { BackgroundColor3 = T.BgPanelHi }, 0.15) end)
-lavaEggResetBtn.MouseLeave:Connect(function() tween(lavaEggResetBtn, { BackgroundColor3 = T.BgPanel2 }, 0.15) end)
-
-lavaEggResetBtn.MouseButton1Click:Connect(function()
-    lavaEggTotal = 0
-    Config.LavaEggTotal = 0
-    saveConfig()
-    lavaEggTotalLbl.Text = "0"
-    notify("岩浆蛋计数已重置", T.Neon)
-end)
-
-lavaEggTotalLbl.Text = tostring(lavaEggTotal)
-
-local function fireLavaEgg(silent)
-    if not StoreEvent then
-        if not silent then notify("未找到开蛋事件", T.Red) end
-        return false
-    end
-    if isBackpackFull() then
-        if not silent then notify("背包已满，无法开蛋", T.Red) end
-        return false
-    end
-    local ok = pcall(function()
-        StoreEvent:FireServer("Egg", EGG_DEFS.lava.count, EGG_DEFS.lava.currency, EGG_DEFS.lava.name)
-    end)
-    if ok then
-        lavaEggTotal = lavaEggTotal + EGG_DEFS.lava.count
-        Config.LavaEggTotal = lavaEggTotal
-        lavaEggTotalLbl.Text = tostring(lavaEggTotal)
-        saveConfig()
-    end
-    return ok
-end
-
-lavaEggOpenBtn.MouseButton1Click:Connect(function()
-    if fireLavaEgg() then
-        notify("已抽取岩浆蛋 × " .. EGG_DEFS.lava.count, T.Lava)
-    end
-end)
-
-local sandEggCard = accordionCard("◆ 沙漠蛋 X5 抽取", T.Sand, false)
-
-local sandParamRow = Instance.new("Frame")
-sandParamRow.Size = UDim2.new(1, 0, 0, 28)
-sandParamRow.BackgroundColor3 = T.BgPanel2
-sandParamRow.BackgroundTransparency = 0.4
-sandParamRow.Parent = sandEggCard
-corner(sandParamRow, 4)
-stroke(sandParamRow, T.Sand, 1.2, 0.3)
-
-local sandParamIcon = Instance.new("TextLabel")
-sandParamIcon.Size = UDim2.new(0, 24, 1, 0)
-sandParamIcon.Position = UDim2.new(0, 6, 0, 0)
-sandParamIcon.BackgroundTransparency = 1
-sandParamIcon.Text = "🏜️"
-sandParamIcon.TextColor3 = T.Sand
-sandParamIcon.Font = T.FB
-sandParamIcon.TextSize = 14
-sandParamIcon.Parent = sandParamRow
-
-local sandParamLbl = Instance.new("TextLabel")
-sandParamLbl.Size = UDim2.new(1, -36, 1, 0)
-sandParamLbl.Position = UDim2.new(0, 30, 0, 0)
-sandParamLbl.BackgroundTransparency = 1
-sandParamLbl.Text = "SandPetEgg × 5  ·  货币: Gem"
-sandParamLbl.TextColor3 = T.Sand
-sandParamLbl.TextXAlignment = Enum.TextXAlignment.Left
-sandParamLbl.Font = T.FM
-sandParamLbl.TextSize = 10
-sandParamLbl.Parent = sandParamRow
-
-EggToggleRefs.SandEggAuto = toggleRow(sandEggCard, "自动开蛋", "SandEggAuto")
-floatInput(sandEggCard, "间隔(秒)", "SandEggInterval", 0.1, 30)
-
-local sandEggTotalLbl = infoRow(sandEggCard, "累计开蛋", T.Sand)
-
-local sandEggOpenBtn = Instance.new("TextButton")
-sandEggOpenBtn.Size = UDim2.new(1, 0, 0, 26)
-sandEggOpenBtn.BackgroundColor3 = T.Sand
-sandEggOpenBtn.Text = "🏜️  立即抽取一次 (× 5)"
-sandEggOpenBtn.TextColor3 = T.BgDeep
-sandEggOpenBtn.Font = T.FB
-sandEggOpenBtn.TextSize = 11
-sandEggOpenBtn.AutoButtonColor = false
-sandEggOpenBtn.BorderSizePixel = 0
-sandEggOpenBtn.Parent = sandEggCard
-corner(sandEggOpenBtn, 4)
-gradientMulti(sandEggOpenBtn, {
-    {0, Color3.fromRGB(255, 225, 160)},
-    {1, T.SandDark},
-}, 90)
-stroke(sandEggOpenBtn, T.Sand, 1.2, 0.2)
-
-sandEggOpenBtn.MouseEnter:Connect(function() tween(sandEggOpenBtn, { BackgroundTransparency = 0.15 }, 0.15) end)
-sandEggOpenBtn.MouseLeave:Connect(function() tween(sandEggOpenBtn, { BackgroundTransparency = 0 }, 0.15) end)
-
-local sandEggResetBtn = Instance.new("TextButton")
-sandEggResetBtn.Size = UDim2.new(1, 0, 0, 20)
-sandEggResetBtn.BackgroundColor3 = T.BgPanel2
-sandEggResetBtn.Text = "⟲  重置开蛋计数"
-sandEggResetBtn.TextColor3 = T.Red
-sandEggResetBtn.Font = T.FM
-sandEggResetBtn.TextSize = 9
-sandEggResetBtn.AutoButtonColor = false
-sandEggResetBtn.BorderSizePixel = 0
-sandEggResetBtn.Parent = sandEggCard
-corner(sandEggResetBtn, 3)
-stroke(sandEggResetBtn, T.Red, 1, 0.4)
-
-sandEggResetBtn.MouseEnter:Connect(function() tween(sandEggResetBtn, { BackgroundColor3 = T.BgPanelHi }, 0.15) end)
-sandEggResetBtn.MouseLeave:Connect(function() tween(sandEggResetBtn, { BackgroundColor3 = T.BgPanel2 }, 0.15) end)
-
-sandEggResetBtn.MouseButton1Click:Connect(function()
-    sandEggTotal = 0
-    Config.SandEggTotal = 0
-    saveConfig()
-    sandEggTotalLbl.Text = "0"
-    notify("沙漠蛋计数已重置", T.Neon)
-end)
-
-sandEggTotalLbl.Text = tostring(sandEggTotal)
-
-local function fireSandEgg(silent)
-    if not StoreEvent then
-        if not silent then notify("未找到开蛋事件", T.Red) end
-        return false
-    end
-    if isBackpackFull() then
-        if not silent then notify("背包已满，无法开蛋", T.Red) end
-        return false
-    end
-    local ok = pcall(function()
-        StoreEvent:FireServer("Egg", EGG_DEFS.sand.count, EGG_DEFS.sand.currency, EGG_DEFS.sand.name)
-    end)
-    if ok then
-        sandEggTotal = sandEggTotal + EGG_DEFS.sand.count
-        Config.SandEggTotal = sandEggTotal
-        sandEggTotalLbl.Text = tostring(sandEggTotal)
-        saveConfig()
-    end
-    return ok
-end
-
-sandEggOpenBtn.MouseButton1Click:Connect(function()
-    if fireSandEgg() then
-        notify("已抽取沙漠蛋 × " .. EGG_DEFS.sand.count, T.Sand)
-    end
-end)
-
-local jungleEggCard = accordionCard("◆ 主岛蛋 X5 抽取", T.Jungle, false)
-
-local jParamRow = Instance.new("Frame")
-jParamRow.Size = UDim2.new(1, 0, 0, 28)
-jParamRow.BackgroundColor3 = T.BgPanel2
-jParamRow.BackgroundTransparency = 0.4
-jParamRow.Parent = jungleEggCard
-corner(jParamRow, 4)
-stroke(jParamRow, T.Jungle, 1.2, 0.3)
-
-local jParamIcon = Instance.new("TextLabel")
-jParamIcon.Size = UDim2.new(0, 24, 1, 0)
-jParamIcon.Position = UDim2.new(0, 6, 0, 0)
-jParamIcon.BackgroundTransparency = 1
-jParamIcon.Text = "🌴"
-jParamIcon.TextColor3 = T.Jungle
-jParamIcon.Font = T.FB
-jParamIcon.TextSize = 14
-jParamIcon.Parent = jParamRow
-
-local jParamLbl = Instance.new("TextLabel")
-jParamLbl.Size = UDim2.new(1, -36, 1, 0)
-jParamLbl.Position = UDim2.new(0, 30, 0, 0)
-jParamLbl.BackgroundTransparency = 1
-jParamLbl.Text = "JunglePetEgg × 5  ·  货币: Gem"
-jParamLbl.TextColor3 = T.Jungle
-jParamLbl.TextXAlignment = Enum.TextXAlignment.Left
-jParamLbl.Font = T.FM
-jParamLbl.TextSize = 10
-jParamLbl.Parent = jParamRow
-
-EggToggleRefs.JungleEggAuto = toggleRow(jungleEggCard, "自动开蛋", "JungleEggAuto")
-floatInput(jungleEggCard, "间隔(秒)", "JungleEggInterval", 0.1, 30)
-
-local jungleEggTotalLbl = infoRow(jungleEggCard, "累计开蛋", T.Jungle)
-
-local jungleEggOpenBtn = Instance.new("TextButton")
-jungleEggOpenBtn.Size = UDim2.new(1, 0, 0, 26)
-jungleEggOpenBtn.BackgroundColor3 = T.Jungle
-jungleEggOpenBtn.Text = "🌴  立即抽取一次 (× 5)"
-jungleEggOpenBtn.TextColor3 = T.BgDeep
-jungleEggOpenBtn.Font = T.FB
-jungleEggOpenBtn.TextSize = 11
-jungleEggOpenBtn.AutoButtonColor = false
-jungleEggOpenBtn.BorderSizePixel = 0
-jungleEggOpenBtn.Parent = jungleEggCard
-corner(jungleEggOpenBtn, 4)
-gradientMulti(jungleEggOpenBtn, {
-    {0, Color3.fromRGB(170, 245, 175)},
-    {1, T.JungleDark},
-}, 90)
-stroke(jungleEggOpenBtn, T.Jungle, 1.2, 0.2)
-
-jungleEggOpenBtn.MouseEnter:Connect(function() tween(jungleEggOpenBtn, { BackgroundTransparency = 0.15 }, 0.15) end)
-jungleEggOpenBtn.MouseLeave:Connect(function() tween(jungleEggOpenBtn, { BackgroundTransparency = 0 }, 0.15) end)
-
-local jungleEggResetBtn = Instance.new("TextButton")
-jungleEggResetBtn.Size = UDim2.new(1, 0, 0, 20)
-jungleEggResetBtn.BackgroundColor3 = T.BgPanel2
-jungleEggResetBtn.Text = "⟲  重置开蛋计数"
-jungleEggResetBtn.TextColor3 = T.Red
-jungleEggResetBtn.Font = T.FM
-jungleEggResetBtn.TextSize = 9
-jungleEggResetBtn.AutoButtonColor = false
-jungleEggResetBtn.BorderSizePixel = 0
-jungleEggResetBtn.Parent = jungleEggCard
-corner(jungleEggResetBtn, 3)
-stroke(jungleEggResetBtn, T.Red, 1, 0.4)
-
-jungleEggResetBtn.MouseEnter:Connect(function() tween(jungleEggResetBtn, { BackgroundColor3 = T.BgPanelHi }, 0.15) end)
-jungleEggResetBtn.MouseLeave:Connect(function() tween(jungleEggResetBtn, { BackgroundColor3 = T.BgPanel2 }, 0.15) end)
-
-jungleEggResetBtn.MouseButton1Click:Connect(function()
-    jungleEggTotal = 0
-    Config.JungleEggTotal = 0
-    saveConfig()
-    jungleEggTotalLbl.Text = "0"
-    notify("主岛蛋计数已重置", T.Neon)
-end)
-
-jungleEggTotalLbl.Text = tostring(jungleEggTotal)
-
-local function fireJungleEgg(silent)
-    if not StoreEvent then
-        if not silent then notify("未找到开蛋事件", T.Red) end
-        return false
-    end
-    if isBackpackFull() then
-        if not silent then notify("背包已满，无法开蛋", T.Red) end
-        return false
-    end
-    local ok = pcall(function()
-        StoreEvent:FireServer("Egg", EGG_DEFS.jungle.count, EGG_DEFS.jungle.currency, EGG_DEFS.jungle.name)
-    end)
-    if ok then
-        jungleEggTotal = jungleEggTotal + EGG_DEFS.jungle.count
-        Config.JungleEggTotal = jungleEggTotal
-        jungleEggTotalLbl.Text = tostring(jungleEggTotal)
-        saveConfig()
-    end
-    return ok
-end
-
-jungleEggOpenBtn.MouseButton1Click:Connect(function()
-    if fireJungleEgg() then
-        notify("已抽取主岛蛋 × " .. EGG_DEFS.jungle.count, T.Jungle)
-    end
-end)
 
 local autoCard = accordionCard("◆ 自动重生", T.Purple, false)
 
@@ -2347,7 +1713,7 @@ startAutoTrain = function()
                 totalCount = totalCount + 1
                 Config.TotalReps = totalCount
             end
-            safeWait(Config.Interval)
+            task.wait(Config.Interval)
         end
         if isTraining then isTraining = false end
     end)
@@ -2483,6 +1849,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     if ScreenGui.Parent then ScreenGui:Destroy() end
 end)
 
+-- ==================== 主循环 ====================
 task.spawn(function()
     while ScreenGui.Parent do
         local elapsed = isTraining and (tick() - startTime) or 0
@@ -2505,17 +1872,6 @@ task.spawn(function()
             rowPerRep.Text = string.format("%.2f", gain / trainCount)
         else
             rowPerRep.Text = "—"
-        end
-
-        local bpCount = getBackpackCount()
-        local bpMax = Config.EggMaxBackpack
-        backpackLbl.Text = tostring(bpCount) .. " / " .. tostring(bpMax)
-        if bpCount >= bpMax then
-            backpackLbl.TextColor3 = T.Red
-        elseif bpCount >= bpMax * 0.85 then
-            backpackLbl.TextColor3 = T.Yellow
-        else
-            backpackLbl.TextColor3 = T.Green
         end
 
         if DataPanelOpen then
@@ -2566,6 +1922,7 @@ task.spawn(function()
     end
 end)
 
+-- ==================== 反挂机 ====================
 local function fireAntiAfk()
     if not Config.AntiAfk then return end
     if pcall(function()
@@ -2594,6 +1951,7 @@ task.spawn(function()
     end
 end)
 
+-- ==================== 重生检测循环（关键：只有实际重生值增加才计数） ====================
 task.spawn(function()
     while ScreenGui.Parent do
         task.wait(0.5)
@@ -2602,11 +1960,13 @@ task.spawn(function()
             if hasStatSource("Rebirth") then
                 local cur = getStat("Rebirth")
                 if cur > pendingRebirthLastValue then
+                    -- 检测到重生值增加 → 计数 +1
                     pendingRebirth = false
                     Config.AutoRebirthDone = Config.AutoRebirthDone + 1
                     saveConfig()
                     if updateRebirthDisplay then updateRebirthDisplay() end
                 elseif tick() - pendingRebirthStart > REBIRTH_TIMEOUT then
+                    -- 超时未检测到，放弃本次
                     pendingRebirth = false
                     notify("重生超时（未检测到）", T.Red)
                 end
@@ -2617,9 +1977,10 @@ task.spawn(function()
     end
 end)
 
+-- ==================== 自动重生循环 ====================
 task.spawn(function()
     while ScreenGui.Parent do
-        safeWait(Config.AutoRebirthDelay)
+        task.wait(Config.AutoRebirthDelay)
         if Config.AutoRebirth and RebirthEvent and not pendingRebirth then
             local target = Config.AutoRebirthCount
             local done = Config.AutoRebirthDone
@@ -2635,6 +1996,7 @@ task.spawn(function()
                 local hasRebirthStat = hasStatSource("Rebirth")
 
                 if hasRebirthStat then
+                    -- 有重生数据源 → 记录当前值，等待检测
                     pendingRebirthLastValue = getStat("Rebirth")
                     pendingRebirth = true
                     pendingRebirthStart = tick()
@@ -2645,6 +2007,7 @@ task.spawn(function()
                 pcall(function() RebirthEvent:FireServer("Update") end)
 
                 if not hasRebirthStat then
+                    -- 无重生数据源 → 退化为立即计数
                     Config.AutoRebirthDone = done + 1
                     saveConfig()
                     if updateRebirthDisplay then updateRebirthDisplay() end
@@ -2654,101 +2017,10 @@ task.spawn(function()
     end
 end)
 
+-- ==================== 自动重置 ====================
 task.spawn(function()
     while ScreenGui.Parent do
-        safeWait(Config.SkyEggInterval)
-        if Config.SkyEggAuto and StoreEvent then
-            if isBackpackFull() then
-                Config.SkyEggAuto = false
-                saveConfig()
-                if EggToggleRefs.SkyEggAuto and EggToggleRefs.SkyEggAuto.refresh then
-                    EggToggleRefs.SkyEggAuto.refresh()
-                end
-                notify("背包已满 " .. getBackpackCount() .. "/" .. Config.EggMaxBackpack .. " — 天空蛋自动抽取已停止", T.Red)
-            else
-                pcall(function()
-                    StoreEvent:FireServer("Egg", EGG_DEFS.sky.count, EGG_DEFS.sky.currency, EGG_DEFS.sky.name)
-                end)
-                skyEggTotal = skyEggTotal + EGG_DEFS.sky.count
-                Config.SkyEggTotal = skyEggTotal
-                skyEggTotalLbl.Text = tostring(skyEggTotal)
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while ScreenGui.Parent do
-        safeWait(Config.LavaEggInterval)
-        if Config.LavaEggAuto and StoreEvent then
-            if isBackpackFull() then
-                Config.LavaEggAuto = false
-                saveConfig()
-                if EggToggleRefs.LavaEggAuto and EggToggleRefs.LavaEggAuto.refresh then
-                    EggToggleRefs.LavaEggAuto.refresh()
-                end
-                notify("背包已满 " .. getBackpackCount() .. "/" .. Config.EggMaxBackpack .. " — 岩浆蛋自动抽取已停止", T.Red)
-            else
-                pcall(function()
-                    StoreEvent:FireServer("Egg", EGG_DEFS.lava.count, EGG_DEFS.lava.currency, EGG_DEFS.lava.name)
-                end)
-                lavaEggTotal = lavaEggTotal + EGG_DEFS.lava.count
-                Config.LavaEggTotal = lavaEggTotal
-                lavaEggTotalLbl.Text = tostring(lavaEggTotal)
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while ScreenGui.Parent do
-        safeWait(Config.SandEggInterval)
-        if Config.SandEggAuto and StoreEvent then
-            if isBackpackFull() then
-                Config.SandEggAuto = false
-                saveConfig()
-                if EggToggleRefs.SandEggAuto and EggToggleRefs.SandEggAuto.refresh then
-                    EggToggleRefs.SandEggAuto.refresh()
-                end
-                notify("背包已满 " .. getBackpackCount() .. "/" .. Config.EggMaxBackpack .. " — 沙漠蛋自动抽取已停止", T.Red)
-            else
-                pcall(function()
-                    StoreEvent:FireServer("Egg", EGG_DEFS.sand.count, EGG_DEFS.sand.currency, EGG_DEFS.sand.name)
-                end)
-                sandEggTotal = sandEggTotal + EGG_DEFS.sand.count
-                Config.SandEggTotal = sandEggTotal
-                sandEggTotalLbl.Text = tostring(sandEggTotal)
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while ScreenGui.Parent do
-        safeWait(Config.JungleEggInterval)
-        if Config.JungleEggAuto and StoreEvent then
-            if isBackpackFull() then
-                Config.JungleEggAuto = false
-                saveConfig()
-                if EggToggleRefs.JungleEggAuto and EggToggleRefs.JungleEggAuto.refresh then
-                    EggToggleRefs.JungleEggAuto.refresh()
-                end
-                notify("背包已满 " .. getBackpackCount() .. "/" .. Config.EggMaxBackpack .. " — 主岛蛋自动抽取已停止", T.Red)
-            else
-                pcall(function()
-                    StoreEvent:FireServer("Egg", EGG_DEFS.jungle.count, EGG_DEFS.jungle.currency, EGG_DEFS.jungle.name)
-                end)
-                jungleEggTotal = jungleEggTotal + EGG_DEFS.jungle.count
-                Config.JungleEggTotal = jungleEggTotal
-                jungleEggTotalLbl.Text = tostring(jungleEggTotal)
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while ScreenGui.Parent do
-        safeWait(Config.AutoResetInterval)
+        task.wait(Config.AutoResetInterval)
         if Config.AutoReset then
             pcall(function()
                 local char = LocalPlayer.Character
@@ -2761,6 +2033,7 @@ task.spawn(function()
     end
 end)
 
+-- ==================== 键盘快捷键 ====================
 track(UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.KeyCode == Enum.KeyCode.Insert then
@@ -2780,6 +2053,7 @@ track(UserInputService.InputBegan:Connect(function(input, processed)
     end
 end))
 
+-- ==================== 初始化 ====================
 updateStartBtn()
 updateStatus()
 refreshAllStats()
@@ -2802,4 +2076,4 @@ if Config.MinimizeOnStart then
     task.defer(collapse)
 end
 
-notify("力量之冠 v4.0 — 已启动", T.Neon)
+notify("力量之冠 v1.0 — 已启动", T.Neon)
