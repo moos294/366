@@ -134,7 +134,6 @@ local T = {
     RedDim   = Color3.fromRGB(180, 30, 60),
     Yellow   = Color3.fromRGB(255, 220, 80),
     Purple   = Color3.fromRGB(180, 120, 255),
-    Orange   = Color3.fromRGB(255, 140, 60),
     Sky      = Color3.fromRGB(96, 200, 255),
     SkyDark  = Color3.fromRGB(40, 130, 200),
     Lava     = Color3.fromRGB(255, 90, 50),
@@ -221,16 +220,12 @@ local function cornerBrackets(parent, color, size, thickness)
         return f
     end
 
-    -- 左上角
     makeFrame(UDim2.new(0, 0, 0, 0),               UDim2.new(0, size, 0, thickness))
     makeFrame(UDim2.new(0, 0, 0, 0),               UDim2.new(0, thickness, 0, size))
-    -- 右上角
     makeFrame(UDim2.new(1, -size, 0, 0),           UDim2.new(0, size, 0, thickness))
     makeFrame(UDim2.new(1, -thickness, 0, 0),      UDim2.new(0, thickness, 0, size))
-    -- 左下角
     makeFrame(UDim2.new(0, 0, 1, -thickness),      UDim2.new(0, size, 0, thickness))
     makeFrame(UDim2.new(0, 0, 1, -size),           UDim2.new(0, thickness, 0, size))
-    -- 右下角
     makeFrame(UDim2.new(1, -size, 1, -thickness),  UDim2.new(0, size, 0, thickness))
     makeFrame(UDim2.new(1, -thickness, 1, -size),  UDim2.new(0, thickness, 0, size))
 end
@@ -401,8 +396,8 @@ local function isBackpackFull()
     return getBackpackCount() >= maxCap
 end
 
--- ✅ 强制使用 PlayerGui，兼容性最好
-local parentGui = LocalPlayer:WaitForChild("PlayerGui")
+-- ✅ 忍者注入器专用：强制 PlayerGui 挂载 + 显式 Enabled + 高 DisplayOrder
+local parentGui = PlayerGui
 
 local old = parentGui:FindFirstChild("CrownStrengthUI")
 if old then old:Destroy() end
@@ -412,7 +407,17 @@ ScreenGui.Name = "CrownStrengthUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.IgnoreGuiInset = true
+ScreenGui.Enabled = true              -- ✅ 显式启用
+ScreenGui.DisplayOrder = 999          -- ✅ 最高显示优先级
 ScreenGui.Parent = parentGui
+
+-- ✅ 挂载验证：如果第一次没挂上，延迟重试
+task.defer(function()
+    task.wait(0.1)
+    if not ScreenGui.Parent then
+        ScreenGui.Parent = PlayerGui
+    end
+end)
 
 local W, H = 280, 300
 
