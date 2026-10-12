@@ -33,7 +33,6 @@ local COLLAPSED = 44
 local IS_TOUCH = UserInputService.TouchEnabled
 local REBIRTH_TIMEOUT = 15
 
--- ✅ FIX: 最小循环间隔改为 0.05，与 MIN_INTERVAL=0.08 保持一致
 local MIN_LOOP_WAIT = 0.05
 local function safeWait(t)
     task.wait(math.max(MIN_LOOP_WAIT, tonumber(t) or MIN_LOOP_WAIT))
@@ -206,7 +205,6 @@ local function fmt(n)
     return out
 end
 
--- ✅ FIX: 重写 cornerBrackets，4 个角的 8 条线段位置现在全部正确
 local function cornerBrackets(parent, color, size, thickness)
     color = color or T.Neon
     size = size or 8
@@ -403,11 +401,8 @@ local function isBackpackFull()
     return getBackpackCount() >= maxCap
 end
 
-local parentGui
-pcall(function()
-    if type(gethui) == "function" then parentGui = gethui() end
-end)
-if not parentGui then parentGui = PlayerGui end
+-- ✅ 强制使用 PlayerGui，兼容性最好
+local parentGui = LocalPlayer:WaitForChild("PlayerGui")
 
 local old = parentGui:FindFirstChild("CrownStrengthUI")
 if old then old:Destroy() end
