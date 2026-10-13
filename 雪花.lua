@@ -1,3 +1,4 @@
+local __CS_OK, __CS_ERR = pcall(function()
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -2922,3 +2923,15 @@ if Config.MinimizeOnStart then
 end
 
 notify("力量之冠 v2.0 — 已启动", T.Neon)
+end)
+
+if not __CS_OK then
+    warn("========== CrownStrength 崩溃 ==========")
+    warn("错误: " .. tostring(__CS_ERR))
+    warn("=========================================")
+    if typeof(writefile) == "function" then
+        pcall(function()
+            writefile("CrownStrength_error.txt", tostring(__CS_ERR))
+        end)
+    end
+end
