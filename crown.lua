@@ -1373,6 +1373,138 @@ numberInput(moveCard, "\233\163\158\232\161\140\233\128\159\229\186\166", "FlySp
     flySpeed = v
 end)
 
+local playerListTitle = Instance.new("TextLabel")
+playerListTitle.Size = UDim2.new(1, 0, 0, 16)
+playerListTitle.BackgroundTransparency = 1
+playerListTitle.Text = "\226\128\186 \230\156\141\229\138\161\229\153\168\231\142\169\229\174\182"
+playerListTitle.TextColor3 = T.Neon
+playerListTitle.TextXAlignment = Enum.TextXAlignment.Left
+playerListTitle.Font = T.FB
+playerListTitle.TextSize = 9
+playerListTitle.Parent = moveCard
+
+local playerListFrame = Instance.new("Frame")
+playerListFrame.Size = UDim2.new(1, 0, 0, 90)
+playerListFrame.BackgroundColor3 = T.BgPanel2
+playerListFrame.BackgroundTransparency = 0.4
+playerListFrame.BorderSizePixel = 0
+playerListFrame.Parent = moveCard
+corner(playerListFrame, 4)
+stroke(playerListFrame, T.Stroke, 1, 0.5)
+
+local playerScroll = Instance.new("ScrollingFrame")
+playerScroll.Size = UDim2.new(1, -8, 1, -8)
+playerScroll.Position = UDim2.new(0, 4, 0, 4)
+playerScroll.BackgroundTransparency = 1
+playerScroll.BorderSizePixel = 0
+playerScroll.ScrollBarThickness = 2
+playerScroll.ScrollBarImageColor3 = T.Neon
+playerScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+playerScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+playerScroll.Parent = playerListFrame
+
+local playerLayout = Instance.new("UIListLayout")
+playerLayout.Padding = UDim.new(0, 3)
+playerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+playerLayout.Parent = playerScroll
+
+local function refreshPlayerList()
+    for _, c in ipairs(playerScroll:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+
+    local allPlayers = Players:GetPlayers()
+    for _, plr in ipairs(allPlayers) do
+        if plr ~= LocalPlayer then
+            local row = Instance.new("TextButton")
+            row.Size = UDim2.new(1, -4, 0, 18)
+            row.BackgroundColor3 = T.BgPanelHi
+            row.BackgroundTransparency = 0.3
+            row.Text = ""
+            row.AutoButtonColor = false
+            row.BorderSizePixel = 0
+            row.Parent = playerScroll
+            corner(row, 3)
+            stroke(row, T.Stroke, 1, 0.5)
+
+            local nameLbl = Instance.new("TextLabel")
+            nameLbl.Size = UDim2.new(1, -8, 1, 0)
+            nameLbl.Position = UDim2.new(0, 4, 0, 0)
+            nameLbl.BackgroundTransparency = 1
+            nameLbl.Text = plr.Name
+            nameLbl.TextColor3 = T.Text
+            nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+            nameLbl.Font = T.F
+            nameLbl.TextSize = 9
+            nameLbl.Parent = row
+
+            row.MouseEnter:Connect(function()
+                tween(row, { BackgroundColor3 = T.Neon, BackgroundTransparency = 0.6 }, 0.12)
+            end)
+            row.MouseLeave:Connect(function()
+                tween(row, { BackgroundColor3 = T.BgPanelHi, BackgroundTransparency = 0.3 }, 0.12)
+            end)
+
+            row.MouseButton1Click:Connect(function()
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local tchar = plr.Character
+                local thrp = tchar and tchar:FindFirstChild("HumanoidRootPart")
+                if hrp and thrp then
+                    hrp.CFrame = thrp.CFrame * CFrame.new(0, 5, 0)
+                    game:GetService("StarterGui"):SetCore("SendNotification", {
+                        Title = "\228\188\160\233\128\129",
+                        Text = "\229\183\178\228\188\160\233\128\129\229\136\176 " .. plr.Name .. " \229\164\180\233\161\182",
+                        Duration = 4,
+                    })
+                else
+                    game:GetService("StarterGui"):SetCore("SendNotification", {
+                        Title = "\228\188\160\233\128\129\229\164\177\232\180\165",
+                        Text = "\231\142\169\229\174\182\230\156\170\229\138\160\232\189\189",
+                        Duration = 4,
+                    })
+                end
+            end)
+        end
+    end
+end
+
+refreshPlayerList()
+
+local refreshPlayerBtn = Instance.new("TextButton")
+refreshPlayerBtn.Size = UDim2.new(1, 0, 0, 20)
+refreshPlayerBtn.BackgroundColor3 = T.BgPanel2
+refreshPlayerBtn.Text = "\226\159\179  \229\136\183\230\150\176\231\142\169\229\174\182\229\136\151\232\161\168"
+refreshPlayerBtn.TextColor3 = T.Neon
+refreshPlayerBtn.Font = T.FM
+refreshPlayerBtn.TextSize = 9
+refreshPlayerBtn.AutoButtonColor = false
+refreshPlayerBtn.BorderSizePixel = 0
+refreshPlayerBtn.Parent = moveCard
+corner(refreshPlayerBtn, 3)
+stroke(refreshPlayerBtn, T.Neon, 1, 0.4)
+
+refreshPlayerBtn.MouseEnter:Connect(function()
+    tween(refreshPlayerBtn, { BackgroundColor3 = T.BgPanelHi }, 0.15)
+end)
+refreshPlayerBtn.MouseLeave:Connect(function()
+    tween(refreshPlayerBtn, { BackgroundColor3 = T.BgPanel2 }, 0.15)
+end)
+
+refreshPlayerBtn.MouseButton1Click:Connect(function()
+    refreshPlayerList()
+end)
+
+Players.PlayerAdded:Connect(function()
+    task.wait(1)
+    refreshPlayerList()
+end)
+
+Players.PlayerRemoving:Connect(function()
+    task.wait(0.5)
+    refreshPlayerList()
+end)
+
 local statCard = accordionCard("\226\151\134 \231\187\159\232\174\161", T.Yellow, false)
 
 local statSession = infoRow(statCard, "\230\156\172\230\172\161\232\174\173\231\187\131", T.Text)
@@ -2136,6 +2268,7 @@ updateStartBtn()
 updateStatus()
 refreshAllStats()
 applyWalkSpeed()
+refreshPlayerList()
 
 if Config.AutoStart then
     startAutoTrain()
