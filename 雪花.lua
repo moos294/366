@@ -17,6 +17,30 @@ local Config = {
     Fly = false, FlySpeed = 50, WalkSpeed = 16,
     AutoRebirthCount = 0, AutoRebirthDone = 0,
     DataPanelOpen = false,
+    LogEnabled = true,
+    LogMaxLines = 200,
+    LogPanelOpen = false,
+    StatsPanelOpen = false,
+    HistoryPanelOpen = false,
+    HistorySampleRate = 5,
+    HistoryMaxPoints = 720,
+    TrainMultiplier = 1,
+    AutoSwitchAction = false,
+    AutoSwitchEvery = 100,
+    TargetStrength = 0,
+    TargetStrengthStop = false,
+    SessionTimeLimit = 0,
+    SessionTimeLimitStop = false,
+    Theme = "Cyber",
+    UIScale = 1,
+    LoopMode = false,
+    LoopTrainTime = 30,
+    LoopRebirthTime = 5,
+    AutoFollow = false,
+    FollowTarget = "",
+    NoClip = false,
+    TeleportPoints = {},
+    QuickTP = "",
 }
 
 local Actions = { "PushUp", "SitUp", "PullUp", "Squat" }
@@ -27,6 +51,82 @@ local MIN_W, MIN_H, MAX_W, MAX_H = 260, 260, 420, 600
 local COLLAPSED = 44
 local IS_TOUCH = UserInputService.TouchEnabled
 local REBIRTH_TIMEOUT = 15
+
+local Themes = {
+    Cyber = {
+        BgDeep   = Color3.fromRGB(4, 7, 12),
+        BgPanel  = Color3.fromRGB(10, 16, 24),
+        BgPanel2 = Color3.fromRGB(16, 24, 36),
+        BgPanelHi= Color3.fromRGB(24, 36, 52),
+        Grid     = Color3.fromRGB(30, 50, 80),
+        Stroke   = Color3.fromRGB(40, 70, 110),
+        Neon     = Color3.fromRGB(0, 229, 255),
+        Neon2    = Color3.fromRGB(255, 60, 180),
+        NeonDim  = Color3.fromRGB(0, 130, 170),
+        Green    = Color3.fromRGB(0, 255, 160),
+        GreenDim = Color3.fromRGB(0, 160, 100),
+        Red      = Color3.fromRGB(255, 60, 90),
+        RedDim   = Color3.fromRGB(180, 30, 60),
+        Yellow   = Color3.fromRGB(255, 220, 80),
+        Purple   = Color3.fromRGB(180, 120, 255),
+        Text     = Color3.fromRGB(220, 235, 255),
+        TextDim  = Color3.fromRGB(110, 140, 180),
+        TextSub  = Color3.fromRGB(70, 95, 130),
+    },
+    Dark = {
+        BgDeep   = Color3.fromRGB(8, 8, 10),
+        BgPanel  = Color3.fromRGB(18, 18, 22),
+        BgPanel2 = Color3.fromRGB(28, 28, 34),
+        BgPanelHi= Color3.fromRGB(40, 40, 48),
+        Grid     = Color3.fromRGB(35, 35, 42),
+        Stroke   = Color3.fromRGB(60, 60, 70),
+        Neon     = Color3.fromRGB(120, 180, 255),
+        Neon2    = Color3.fromRGB(200, 120, 255),
+        NeonDim  = Color3.fromRGB(60, 90, 140),
+        Green    = Color3.fromRGB(80, 220, 140),
+        GreenDim = Color3.fromRGB(40, 140, 90),
+        Red      = Color3.fromRGB(240, 80, 100),
+        RedDim   = Color3.fromRGB(150, 40, 60),
+        Yellow   = Color3.fromRGB(240, 210, 100),
+        Purple   = Color3.fromRGB(170, 130, 240),
+        Text     = Color3.fromRGB(230, 230, 240),
+        TextDim  = Color3.fromRGB(140, 140, 160),
+        TextSub  = Color3.fromRGB(90, 90, 110),
+    },
+    Light = {
+        BgDeep   = Color3.fromRGB(240, 244, 250),
+        BgPanel  = Color3.fromRGB(255, 255, 255),
+        BgPanel2 = Color3.fromRGB(235, 240, 248),
+        BgPanelHi= Color3.fromRGB(220, 228, 240),
+        Grid     = Color3.fromRGB(210, 218, 230),
+        Stroke   = Color3.fromRGB(180, 190, 205),
+        Neon     = Color3.fromRGB(0, 130, 200),
+        Neon2    = Color3.fromRGB(200, 60, 140),
+        NeonDim  = Color3.fromRGB(100, 160, 200),
+        Green    = Color3.fromRGB(0, 170, 110),
+        GreenDim = Color3.fromRGB(0, 120, 80),
+        Red      = Color3.fromRGB(220, 50, 70),
+        RedDim   = Color3.fromRGB(160, 30, 50),
+        Yellow   = Color3.fromRGB(200, 160, 20),
+        Purple   = Color3.fromRGB(130, 80, 200),
+        Text     = Color3.fromRGB(30, 40, 55),
+        TextDim  = Color3.fromRGB(90, 105, 125),
+        TextSub  = Color3.fromRGB(140, 155, 175),
+    },
+}
+
+local T = {}
+for k, v in pairs(Themes.Cyber) do T[k] = v end
+T.F  = Enum.Font.GothamMedium
+T.FB = Enum.Font.GothamBold
+T.FM = Enum.Font.Code
+
+local function applyTheme(name)
+    local th = Themes[name]
+    if not th then return end
+    for k, v in pairs(th) do T[k] = v end
+end
+applyTheme(Config.Theme or "Cyber")
 
 local function findRemote(name, alt)
     local list = { ReplicatedStorage }
@@ -46,7 +146,7 @@ local function saveConfig()
     pcall(function()
         local d = {}
         for k, v in pairs(Config) do
-            if type(v) ~= "table" and type(v) ~= "function" then d[k] = v end
+            if type(v) ~= "function" then d[k] = v end
         end
         writefile(CONFIG_FILE, HttpService:JSONEncode(d))
     end)
@@ -60,33 +160,13 @@ local function loadConfig()
         for k, v in pairs(data) do
             if Config[k] ~= nil and type(Config[k]) == type(v) then Config[k] = v end
         end
+        if type(data.TeleportPoints) == "table" then
+            Config.TeleportPoints = data.TeleportPoints
+        end
     end
 end
 loadConfig()
-
-local T = {
-    BgDeep   = Color3.fromRGB(4, 7, 12),
-    BgPanel  = Color3.fromRGB(10, 16, 24),
-    BgPanel2 = Color3.fromRGB(16, 24, 36),
-    BgPanelHi= Color3.fromRGB(24, 36, 52),
-    Grid     = Color3.fromRGB(30, 50, 80),
-    Stroke   = Color3.fromRGB(40, 70, 110),
-    Neon     = Color3.fromRGB(0, 229, 255),
-    Neon2    = Color3.fromRGB(255, 60, 180),
-    NeonDim  = Color3.fromRGB(0, 130, 170),
-    Green    = Color3.fromRGB(0, 255, 160),
-    GreenDim = Color3.fromRGB(0, 160, 100),
-    Red      = Color3.fromRGB(255, 60, 90),
-    RedDim   = Color3.fromRGB(180, 30, 60),
-    Yellow   = Color3.fromRGB(255, 220, 80),
-    Purple   = Color3.fromRGB(180, 120, 255),
-    Text     = Color3.fromRGB(220, 235, 255),
-    TextDim  = Color3.fromRGB(110, 140, 180),
-    TextSub  = Color3.fromRGB(70, 95, 130),
-    F  = Enum.Font.GothamMedium,
-    FB = Enum.Font.GothamBold,
-    FM = Enum.Font.Code,
-}
+applyTheme(Config.Theme or "Cyber")
 
 local function corner(p, r)
     local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r or 4); c.Parent = p; return c
@@ -138,6 +218,28 @@ local function fmt(n)
     local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
     if out:sub(1, 1) == "," then out = out:sub(2) end
     return out
+end
+
+local function fmtRate(n)
+    n = tonumber(n) or 0
+    if math.abs(n) >= 1e9 then return string.format("%.2fB", n / 1e9) end
+    if math.abs(n) >= 1e6 then return string.format("%.2fM", n / 1e6) end
+    if math.abs(n) >= 1e3 then return string.format("%.2fK", n / 1e3) end
+    return string.format("%.2f", n)
+end
+
+local function fmtDuration(sec)
+    sec = math.floor(tonumber(sec) or 0)
+    if sec < 60 then return sec .. "s" end
+    if sec < 3600 then return string.format("%dm%ds", math.floor(sec / 60), sec % 60) end
+    if sec < 86400 then
+        local h = math.floor(sec / 3600)
+        local m = math.floor((sec % 3600) / 60)
+        return string.format("%dh%dm", h, m)
+    end
+    local d = math.floor(sec / 86400)
+    local h = math.floor((sec % 86400) / 3600)
+    return string.format("%dd%dh", d, h)
 end
 
 local function cornerBrackets(parent, color, size, thickness)
@@ -215,6 +317,13 @@ local pendingRebirthLastValue = 0
 
 local MobileInput = { Forward = false, Back = false, Left = false, Right = false, Up = false, Down = false }
 
+local _lastSwitchAt = nil
+local loopThread = nil
+local loopActive = false
+local followThread = nil
+local noclipConn = nil
+local sessionLimitThread = nil
+
 local STAT_DEFS = {
     { key = "Strength", label = "力量", color = T.Neon,
       names = { "Strength", "Power", "Str", "StrengthValue", "力量", "TotalStrength", "CrownStrength" } },
@@ -236,7 +345,10 @@ local function findStat(key)
     if s.src and s.src.Parent then return true end
     local def
     for _, d in ipairs(STAT_DEFS) do
-        if d.key == key then def = d break end
+        if d.key == key then
+            def = d
+            break
+        end
     end
     if not def then return false end
 
@@ -291,6 +403,122 @@ local function refreshAllStats()
     end
 end
 
+local Logs = {}
+local LogListeners = {}
+
+local function addLog(text, color, tag)
+    if not Config.LogEnabled then return end
+    local entry = {
+        text = tostring(text),
+        color = color or T.Text,
+        tag = tag or "SYS",
+        time = os.date("%H:%M:%S"),
+        tick = tick(),
+    }
+    table.insert(Logs, entry)
+    if #Logs > Config.LogMaxLines then
+        table.remove(Logs, 1)
+    end
+    for _, fn in ipairs(LogListeners) do
+        pcall(fn, entry)
+    end
+end
+
+local function onLog(fn)
+    table.insert(LogListeners, fn)
+    return function()
+        for i, f in ipairs(LogListeners) do
+            if f == fn then table.remove(LogListeners, i) break end
+        end
+    end
+end
+
+local function clearLogs()
+    Logs = {}
+    for _, fn in ipairs(LogListeners) do pcall(fn, nil) end
+end
+
+local function getLogs()
+    return Logs
+end
+
+local History = {
+    strength = {},
+    rebirth = {},
+    gems = {},
+    agility = {},
+    sessionStart = tick(),
+    lastSample = 0,
+}
+
+local function pushHistory(key, value)
+    local list = History[key]
+    if not list then return end
+    table.insert(list, { t = tick(), v = value })
+    if #list > Config.HistoryMaxPoints then
+        table.remove(list, 1)
+    end
+end
+
+local function sampleHistory()
+    local now = tick()
+    if now - History.lastSample < Config.HistorySampleRate then return end
+    History.lastSample = now
+    refreshAllStats()
+    for _, def in ipairs(STAT_DEFS) do
+        if hasStatSource(def.key) then
+            pushHistory(def.key, getStat(def.key))
+        end
+    end
+end
+
+local function getHistory(key)
+    return History[key] or {}
+end
+
+local function getHistoryDelta(key, seconds)
+    local list = History[key]
+    if not list or #list < 2 then return 0, 0 end
+    local now = tick()
+    local cutoff = now - (seconds or 60)
+    local oldest = nil
+    local newest = list[#list]
+    for i = #list, 1, -1 do
+        if list[i].t <= cutoff then
+            oldest = list[i]
+            break
+        end
+    end
+    if not oldest then oldest = list[1] end
+    local delta = newest.v - oldest.v
+    local dt = newest.t - oldest.t
+    return delta, dt
+end
+
+local function clearHistory()
+    for k in pairs(History) do
+        if type(History[k]) == "table" then History[k] = {} end
+    end
+    History.lastSample = 0
+end
+
+local function getSessionStats()
+    local elapsed = tick() - History.sessionStart
+    local stats = {
+        elapsed = elapsed,
+        reps = trainCount or 0,
+        strengthGain = 0,
+        rebirthGain = 0,
+        gemsGain = 0,
+        agilityGain = 0,
+    }
+    for _, def in ipairs(STAT_DEFS) do
+        local delta = getHistoryDelta(def.key, elapsed)
+        stats[def.key .. "Gain"] = delta
+    end
+    return stats
+end
+
 local parentGui
 pcall(function()
     if type(gethui) == "function" then parentGui = gethui() end
@@ -306,6 +534,10 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.Parent = parentGui
+
+local uiScaleObj = Instance.new("UIScale")
+uiScaleObj.Scale = Config.UIScale or 1
+uiScaleObj.Parent = ScreenGui
 
 local W, H = 280, 300
 
@@ -392,7 +624,7 @@ local TitleLbl = Instance.new("TextLabel")
 TitleLbl.Size = UDim2.new(0, 100, 0, 12)
 TitleLbl.Position = UDim2.new(0, 38, 0, 6)
 TitleLbl.BackgroundTransparency = 1
-TitleLbl.Text = "力量之冠"
+TitleLbl.Text = "力量之冠 v2.0"
 TitleLbl.TextColor3 = T.Text
 TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
 TitleLbl.Font = T.FB
@@ -404,7 +636,7 @@ local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(0, 100, 0, 10)
 SubTitle.Position = UDim2.new(0, 38, 0, 19)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "// v1.0"
+SubTitle.Text = "// modular"
 SubTitle.TextColor3 = T.Neon
 SubTitle.TextXAlignment = Enum.TextXAlignment.Left
 SubTitle.Font = T.FM
@@ -414,7 +646,7 @@ SubTitle.Parent = Header
 
 local HeaderDotGlow = Instance.new("Frame")
 HeaderDotGlow.Size = UDim2.new(0, 10, 0, 10)
-HeaderDotGlow.Position = UDim2.new(1, -102, 0.5, -5)
+HeaderDotGlow.Position = UDim2.new(1, -124, 0.5, -5)
 HeaderDotGlow.BackgroundColor3 = T.Red
 HeaderDotGlow.BackgroundTransparency = 0.65
 HeaderDotGlow.BorderSizePixel = 0
@@ -424,7 +656,7 @@ corner(HeaderDotGlow, 5)
 
 local HeaderDot = Instance.new("Frame")
 HeaderDot.Size = UDim2.new(0, 5, 0, 5)
-HeaderDot.Position = UDim2.new(1, -99.5, 0.5, -2.5)
+HeaderDot.Position = UDim2.new(1, -121.5, 0.5, -2.5)
 HeaderDot.BackgroundColor3 = T.Red
 HeaderDot.BorderSizePixel = 0
 HeaderDot.ZIndex = 5
@@ -459,6 +691,7 @@ end
 local CloseBtn = headerButton("×", T.RedDim, -28, T.Red)
 local MinBtn = headerButton("◆", T.NeonDim, -52, T.Neon)
 local DataBtn = headerButton("▤", T.NeonDim, -76, T.Neon)
+local LogBtn = headerButton("≡", T.NeonDim, -100, T.Neon)
 
 local Content = Instance.new("ScrollingFrame")
 Content.Size = UDim2.new(1, 0, 1, -36 - 36)
@@ -483,7 +716,9 @@ ContentLayout.Padding = UDim.new(0, 5)
 ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ContentLayout.Parent = Content
 
-local function notify(text, color)
+local notify
+notify = function(text, color)
+    addLog(text, color, "NTF")
     if not Config.Notifications or not ScreenGui.Parent then return end
     color = color or T.Neon
 
@@ -683,6 +918,8 @@ local function toggleRow(parent, labelText, key, onToggle)
         if onToggle then onToggle(Config[key]) end
         saveConfig()
     end)
+
+    return refresh
 end
 
 local function numberInput(parent, labelText, key, minV, maxV, onChange)
@@ -729,9 +966,10 @@ local function numberInput(parent, labelText, key, minV, maxV, onChange)
             saveConfig()
         else
             box.Text = tostring(Config[key])
-            notify(string.format("范围 %d ~ %d", minV, maxV), T.Red)
+            notify(string.format("范围 %s ~ %s", tostring(minV), tostring(maxV)), T.Red)
         end
     end)
+    return box
 end
 
 local function infoRow(parent, label, color)
@@ -767,6 +1005,24 @@ local function infoRow(parent, label, color)
     return v
 end
 
+local function smallBtn(parent, text, color, onClick)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, 0, 0, 20)
+    b.BackgroundColor3 = T.BgPanel2
+    b.Text = text
+    b.TextColor3 = color or T.Neon
+    b.Font = T.FM
+    b.TextSize = 9
+    b.AutoButtonColor = false
+    b.BorderSizePixel = 0
+    b.Parent = parent
+    corner(b, 3)
+    stroke(b, color or T.Stroke, 1, 0.4)
+    b.MouseEnter:Connect(function() tween(b, { BackgroundColor3 = T.BgPanelHi }, 0.15) end)
+    b.MouseLeave:Connect(function() tween(b, { BackgroundColor3 = T.BgPanel2 }, 0.15) end)
+    if onClick then b.MouseButton1Click:Connect(onClick) end
+    return b
+end
 local FlyControls = Instance.new("Frame")
 FlyControls.Size = UDim2.new(0, 170, 0, 104)
 FlyControls.Position = UDim2.new(0.5, -85, 1, -120)
@@ -829,7 +1085,6 @@ local function clearMobileInput()
 end
 
 local powerCard = accordionCard("◆ 力量数据", T.Neon, true)
-
 local rowStrength = infoRow(powerCard, "当前力量", T.Neon)
 local rowSession  = infoRow(powerCard, "本次增长", T.Green)
 local rowBefore   = infoRow(powerCard, "训练前", T.Yellow)
@@ -875,7 +1130,10 @@ end)
 
 local actionIndex = 1
 for i, v in ipairs(Actions) do
-    if v == Config.Action then actionIndex = i break end
+    if v == Config.Action then
+        actionIndex = i
+        break
+    end
 end
 
 actionBtn.MouseButton1Click:Connect(function()
@@ -971,9 +1229,28 @@ end
 startBtn.MouseEnter:Connect(function() tween(startBtn, { BackgroundTransparency = 0.15 }, 0.15) end)
 startBtn.MouseLeave:Connect(function() tween(startBtn, { BackgroundTransparency = 0 }, 0.15) end)
 
+local advTrainCard = accordionCard("◆ 训练增强", T.Neon, false)
+
+numberInput(advTrainCard, "训练倍率", "TrainMultiplier", 1, 50, function(v)
+    Config.TrainMultiplier = v
+end)
+
+local autoSwitchRefresh = toggleRow(advTrainCard, "自动切换动作", "AutoSwitchAction")
+numberInput(advTrainCard, "切换间隔", "AutoSwitchEvery", 10, 99999)
+
+numberInput(advTrainCard, "目标力量", "TargetStrength", 0, 1e12, function(v)
+    Config.TargetStrength = v
+end)
+toggleRow(advTrainCard, "达标自动停", "TargetStrengthStop")
+
+numberInput(advTrainCard, "时限(秒)", "SessionTimeLimit", 0, 86400, function(v)
+    Config.SessionTimeLimit = v
+end)
+toggleRow(advTrainCard, "时限自动停", "SessionTimeLimitStop")
+
 local autoCard = accordionCard("◆ 自动重生", T.Purple, false)
 
-toggleRow(autoCard, "自动重生", "AutoRebirth")
+local arRefresh = toggleRow(autoCard, "自动重生", "AutoRebirth")
 toggleRow(autoCard, "反挂机", "AntiAfk")
 toggleRow(autoCard, "自动重置", "AutoReset")
 toggleRow(autoCard, "通知提示", "Notifications")
@@ -1130,7 +1407,7 @@ barFill.BackgroundColor3 = T.Green
 barFill.BorderSizePixel = 0
 barFill.Parent = barBg
 corner(barFill, 3)
-gradient(barFill, T.Green, T.Neon, 0)
+local barGrad = gradient(barFill, T.Green, T.Neon, 0)
 
 updateRebirthDisplay = function()
     doneLbl.Text = tostring(Config.AutoRebirthDone)
@@ -1138,44 +1415,24 @@ updateRebirthDisplay = function()
         targetLbl.Text = "∞"
         targetLbl.TextColor3 = T.Purple
         barFill.Size = UDim2.new(0, 0, 1, 0)
-        barFill.BackgroundColor3 = T.Purple
+        barGrad.Color = ColorSequence.new(T.Purple, T.Purple)
     else
         targetLbl.Text = tostring(Config.AutoRebirthCount)
         targetLbl.TextColor3 = T.Purple
         local pct = math.clamp(Config.AutoRebirthDone / Config.AutoRebirthCount, 0, 1)
         barFill.Size = UDim2.new(pct, 0, 1, 0)
         if pct >= 1 then
-            barFill.BackgroundColor3 = T.Green
+            barGrad.Color = ColorSequence.new(T.Green, T.Green)
         elseif pct >= 0.5 then
-            barFill.BackgroundColor3 = T.Neon
+            barGrad.Color = ColorSequence.new(T.Neon, T.Neon)
         else
-            barFill.BackgroundColor3 = T.Purple
+            barGrad.Color = ColorSequence.new(T.Purple, T.Purple)
         end
     end
 end
 updateRebirthDisplay()
 
-local resetRebirthBtn = Instance.new("TextButton")
-resetRebirthBtn.Size = UDim2.new(1, 0, 0, 20)
-resetRebirthBtn.BackgroundColor3 = T.BgPanel2
-resetRebirthBtn.Text = "⟲  重置计数"
-resetRebirthBtn.TextColor3 = T.Red
-resetRebirthBtn.Font = T.FM
-resetRebirthBtn.TextSize = 9
-resetRebirthBtn.AutoButtonColor = false
-resetRebirthBtn.BorderSizePixel = 0
-resetRebirthBtn.Parent = autoCard
-corner(resetRebirthBtn, 3)
-stroke(resetRebirthBtn, T.Red, 1, 0.4)
-
-resetRebirthBtn.MouseEnter:Connect(function()
-    tween(resetRebirthBtn, { BackgroundColor3 = T.BgPanelHi }, 0.15)
-end)
-resetRebirthBtn.MouseLeave:Connect(function()
-    tween(resetRebirthBtn, { BackgroundColor3 = T.BgPanel2 }, 0.15)
-end)
-
-resetRebirthBtn.MouseButton1Click:Connect(function()
+local resetRebirthBtn = smallBtn(autoCard, "⟲  重置计数", T.Red, function()
     Config.AutoRebirthDone = 0
     saveConfig()
     updateRebirthDisplay()
@@ -1261,6 +1518,7 @@ end)
 LocalPlayer.CharacterAdded:Connect(function(char)
     task.wait(0.5)
     applyWalkSpeed()
+    FlyControls.Visible = false
     if flying then
         flying = false
         if flyBV then flyBV:Destroy(); flyBV = nil end
@@ -1294,108 +1552,309 @@ numberInput(moveCard, "飞行速度", "FlySpeed", 10, 500, function(v)
     flySpeed = v
 end)
 
-local statCard = accordionCard("◆ 统计", T.Yellow, false)
+toggleRow(moveCard, "无碰撞", "NoClip", function(on)
+    if on then
+        if noclipConn then noclipConn:Disconnect() end
+        noclipConn = RunService.Stepped:Connect(function()
+            local char = LocalPlayer.Character
+            if not char then return end
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end)
+    else
+        if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end
+    end
+end)
 
+local tpCard = accordionCard("◆ 传送", T.Neon2, false)
+
+local function getCharHRP()
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function tpTo(pos)
+    local hrp = getCharHRP()
+    if hrp then
+        hrp.CFrame = CFrame.new(pos)
+        notify("已传送", T.Neon)
+    end
+end
+
+local tpNameBox = Instance.new("TextBox")
+tpNameBox.Size = UDim2.new(1, 0, 0, 20)
+tpNameBox.BackgroundColor3 = T.BgPanel2
+tpNameBox.Text = ""
+tpNameBox.PlaceholderText = "传送点名称"
+tpNameBox.PlaceholderColor3 = T.TextDim
+tpNameBox.TextColor3 = T.Text
+tpNameBox.Font = T.FM
+tpNameBox.TextSize = 9
+tpNameBox.ClearTextOnFocus = false
+tpNameBox.BorderSizePixel = 0
+tpNameBox.Parent = tpCard
+corner(tpNameBox, 3)
+stroke(tpNameBox, T.Stroke, 1, 0.3)
+
+smallBtn(tpCard, "＋ 保存当前位置", T.Green, function()
+    local name = tpNameBox.Text
+    if name == "" then
+        notify("请输入名称", T.Red)
+        return
+    end
+    local hrp = getCharHRP()
+    if not hrp then
+        notify("角色未加载", T.Red)
+        return
+    end
+    Config.TeleportPoints[name] = {
+        x = hrp.Position.X,
+        y = hrp.Position.Y,
+        z = hrp.Position.Z,
+    }
+    saveConfig()
+    notify("已保存 " .. name, T.Green)
+end)
+
+local tpListFrame = Instance.new("Frame")
+tpListFrame.Size = UDim2.new(1, 0, 0, 0)
+tpListFrame.AutomaticSize = Enum.AutomaticSize.Y
+tpListFrame.BackgroundTransparency = 1
+tpListFrame.Parent = tpCard
+
+local tpListLayout = Instance.new("UIListLayout")
+tpListLayout.Padding = UDim.new(0, 4)
+tpListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tpListLayout.Parent = tpListFrame
+
+local function refreshTpList()
+    for _, child in ipairs(tpListFrame:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    for name, pos in pairs(Config.TeleportPoints) do
+        local r = Instance.new("Frame")
+        r.Size = UDim2.new(1, 0, 0, 20)
+        r.BackgroundColor3 = T.BgPanel2
+        r.BackgroundTransparency = 0.4
+        r.Parent = tpListFrame
+        corner(r, 3)
+        stroke(r, T.Stroke, 1, 0.5)
+
+        local l = Instance.new("TextLabel")
+        l.Size = UDim2.new(1, -50, 1, 0)
+        l.Position = UDim2.new(0, 6, 0, 0)
+        l.BackgroundTransparency = 1
+        l.Text = name
+        l.TextColor3 = T.Text
+        l.TextXAlignment = Enum.TextXAlignment.Left
+        l.Font = T.F
+        l.TextSize = 9
+        l.Parent = r
+
+        local go = Instance.new("TextButton")
+        go.Size = UDim2.new(0, 22, 0, 16)
+        go.Position = UDim2.new(1, -46, 0.5, -8)
+        go.BackgroundColor3 = T.GreenDim
+        go.Text = "→"
+        go.TextColor3 = T.Green
+        go.Font = T.FB
+        go.TextSize = 10
+        go.AutoButtonColor = false
+        go.BorderSizePixel = 0
+        go.Parent = r
+        corner(go, 3)
+
+        local del = Instance.new("TextButton")
+        del.Size = UDim2.new(0, 22, 0, 16)
+        del.Position = UDim2.new(1, -22, 0.5, -8)
+        del.BackgroundColor3 = T.RedDim
+        del.Text = "×"
+        del.TextColor3 = T.Red
+        del.Font = T.FB
+        del.TextSize = 10
+        del.AutoButtonColor = false
+        del.BorderSizePixel = 0
+        del.Parent = r
+        corner(del, 3)
+
+        go.MouseButton1Click:Connect(function()
+            tpTo(Vector3.new(pos.x, pos.y, pos.z))
+        end)
+        del.MouseButton1Click:Connect(function()
+            Config.TeleportPoints[name] = nil
+            saveConfig()
+            refreshTpList()
+        end)
+    end
+end
+refreshTpList()
+
+smallBtn(tpCard, "＋ 刷新列表", T.Neon, refreshTpList)
+smallBtn(tpCard, "✕ 清空全部", T.Red, function()
+    Config.TeleportPoints = {}
+    saveConfig()
+    refreshTpList()
+    notify("已清空传送点", T.Red)
+end)
+
+local followCard = accordionCard("◆ 跟随", T.Yellow, false)
+
+local followNameBox = Instance.new("TextBox")
+followNameBox.Size = UDim2.new(1, 0, 0, 20)
+followNameBox.BackgroundColor3 = T.BgPanel2
+followNameBox.Text = Config.FollowTarget
+followNameBox.PlaceholderText = "玩家名"
+followNameBox.PlaceholderColor3 = T.TextDim
+followNameBox.TextColor3 = T.Text
+followNameBox.Font = T.FM
+followNameBox.TextSize = 9
+followNameBox.ClearTextOnFocus = false
+followNameBox.BorderSizePixel = 0
+followNameBox.Parent = followCard
+corner(followNameBox, 3)
+stroke(followNameBox, T.Stroke, 1, 0.3)
+
+followNameBox.FocusLost:Connect(function()
+    Config.FollowTarget = followNameBox.Text
+    saveConfig()
+end)
+
+toggleRow(followCard, "自动跟随", "AutoFollow", function(on)
+    if on then
+        if followThread then task.cancel(followThread) end
+        followThread = task.spawn(function()
+            while Config.AutoFollow and ScreenGui.Parent do
+                local target = Players:FindFirstChild(Config.FollowTarget)
+                if target and target.Character then
+                    local thrp = target.Character:FindFirstChild("HumanoidRootPart")
+                    local hrp = getCharHRP()
+                    if thrp and hrp then
+                        local diff = thrp.Position - hrp.Position
+                        if diff.Magnitude > 6 then
+                            hrp.CFrame = CFrame.new(hrp.Position + diff.Unit * math.min(diff.Magnitude, 3))
+                        end
+                    end
+                end
+                task.wait(0.1)
+            end
+        end)
+        notify("开始跟随 " .. Config.FollowTarget, T.Green)
+    else
+        if followThread then
+            task.cancel(followThread)
+            followThread = nil
+        end
+        notify("停止跟随", T.Red)
+    end
+end)
+
+local loopCard = accordionCard("◆ 循环挂机", T.Green, false)
+
+toggleRow(loopCard, "启用循环", "LoopMode", function(on)
+    loopActive = on
+    if on then
+        if loopThread then task.cancel(loopThread) end
+        loopThread = task.spawn(function()
+            while loopActive and ScreenGui.Parent do
+                local loopStarted = false
+                if not isTraining then
+                    startAutoTrain()
+                    loopStarted = true
+                end
+                updateStartBtn()
+                updateStatus()
+                task.wait(Config.LoopTrainTime)
+
+                if RebirthEvent then
+                    pcall(function() RebirthEvent:FireServer("Start") end)
+                    task.wait(0.5)
+                    pcall(function() RebirthEvent:FireServer("Update") end)
+                end
+
+                if loopStarted and isTraining then
+                    stopAutoTrain()
+                end
+                updateStartBtn()
+                updateStatus()
+                task.wait(Config.LoopRebirthTime)
+            end
+        end)
+        notify("循环挂机已开启", T.Green)
+    else
+        if loopThread then
+            task.cancel(loopThread)
+            loopThread = nil
+        end
+        updateStartBtn()
+        updateStatus()
+        notify("循环挂机已关闭", T.Red)
+    end
+end)
+
+numberInput(loopCard, "训练时长", "LoopTrainTime", 5, 3600, function(v)
+    Config.LoopTrainTime = v
+end)
+
+numberInput(loopCard, "重生间隔", "LoopRebirthTime", 1, 600, function(v)
+    Config.LoopRebirthTime = v
+end)
+
+local themeCard = accordionCard("◆ 主题", T.Neon2, false)
+
+local themeRow = Instance.new("Frame")
+themeRow.Size = UDim2.new(1, 0, 0, 24)
+themeRow.BackgroundTransparency = 1
+themeRow.Parent = themeCard
+
+local themeNames = { "Cyber", "Dark", "Light" }
+local themeLabels = { Cyber = "赛博", Dark = "暗黑", Light = "明亮" }
+
+local themeBtns = {}
+for i, tname in ipairs(themeNames) do
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(0, 78, 1, 0)
+    b.Position = UDim2.new(0, (i - 1) * 82, 0, 0)
+    b.BackgroundColor3 = Config.Theme == tname and T.Neon or T.BgPanel2
+    b.Text = themeLabels[tname]
+    b.TextColor3 = Config.Theme == tname and T.BgDeep or T.Text
+    b.Font = T.FB
+    b.TextSize = 9
+    b.AutoButtonColor = false
+    b.BorderSizePixel = 0
+    b.Parent = themeRow
+    corner(b, 3)
+    stroke(b, T.Stroke, 1, 0.4)
+    themeBtns[tname] = b
+
+    b.MouseButton1Click:Connect(function()
+        Config.Theme = tname
+        saveConfig()
+        notify("主题已切换 — 重启生效", T.Yellow)
+    end)
+end
+
+numberInput(themeCard, "UI缩放", "UIScale", 0.5, 2, function(v)
+    Config.UIScale = v
+    if uiScaleObj then uiScaleObj.Scale = v end
+end)
+
+local statCard = accordionCard("◆ 统计", T.Yellow, false)
 local statSession = infoRow(statCard, "本次训练", T.Text)
 local statTotal = infoRow(statCard, "累计训练", T.Text)
 local statRate = infoRow(statCard, "每秒平均", T.Text)
-
-local Bottom = Instance.new("Frame")
-Bottom.Size = UDim2.new(1, 0, 0, 36)
-Bottom.Position = UDim2.new(0, 0, 1, -36)
-Bottom.BackgroundColor3 = T.BgPanel
-Bottom.BackgroundTransparency = 0.1
-Bottom.BorderSizePixel = 0
-Bottom.ZIndex = 3
-Bottom.Parent = Main
-
-local bottomLine = Instance.new("Frame")
-bottomLine.Size = UDim2.new(1, 0, 0, 1)
-bottomLine.BackgroundColor3 = T.Neon
-bottomLine.BackgroundTransparency = 0.5
-bottomLine.BorderSizePixel = 0
-bottomLine.ZIndex = 4
-bottomLine.Parent = Bottom
-gradientMulti(bottomLine, {{0, T.Neon}, {0.5, T.Neon2}, {1, T.Neon}}, 0)
-
-local statusDotGlow = Instance.new("Frame")
-statusDotGlow.Size = UDim2.new(0, 10, 0, 10)
-statusDotGlow.Position = UDim2.new(0, 10, 0, 8)
-statusDotGlow.BackgroundColor3 = T.Red
-statusDotGlow.BackgroundTransparency = 0.6
-statusDotGlow.BorderSizePixel = 0
-statusDotGlow.ZIndex = 4
-statusDotGlow.Parent = Bottom
-corner(statusDotGlow, 5)
-
-local statusDot = Instance.new("Frame")
-statusDot.Size = UDim2.new(0, 5, 0, 5)
-statusDot.Position = UDim2.new(0, 12.5, 0, 10.5)
-statusDot.BackgroundColor3 = T.Red
-statusDot.BorderSizePixel = 0
-statusDot.ZIndex = 5
-statusDot.Parent = Bottom
-corner(statusDot, 3)
-
-local statusLbl = Instance.new("TextLabel")
-statusLbl.Size = UDim2.new(1, -36, 0, 11)
-statusLbl.Position = UDim2.new(0, 26, 0, 6)
-statusLbl.BackgroundTransparency = 1
-statusLbl.Text = "待机中"
-statusLbl.TextColor3 = T.Text
-statusLbl.TextXAlignment = Enum.TextXAlignment.Left
-statusLbl.Font = T.FM
-statusLbl.TextSize = 9
-statusLbl.ZIndex = 5
-statusLbl.Parent = Bottom
-
-local hintLbl = Instance.new("TextLabel")
-hintLbl.Size = UDim2.new(1, -36, 0, 11)
-hintLbl.Position = UDim2.new(0, 26, 0, 18)
-hintLbl.BackgroundTransparency = 1
-hintLbl.Text = IS_TOUCH and "// 点标题折叠" or "// 点标题 · RS 开关"
-hintLbl.TextColor3 = T.TextSub
-hintLbl.TextXAlignment = Enum.TextXAlignment.Left
-hintLbl.Font = T.FM
-hintLbl.TextSize = 7
-hintLbl.ZIndex = 5
-hintLbl.Parent = Bottom
-
-local ResizeGrip = Instance.new("Frame")
-ResizeGrip.Size = UDim2.new(0, 12, 0, 12)
-ResizeGrip.Position = UDim2.new(1, -16, 1, -16)
-ResizeGrip.BackgroundTransparency = 1
-ResizeGrip.ZIndex = 20
-ResizeGrip.Parent = Main
-
-for i = 1, 3 do
-    local dot = Instance.new("Frame")
-    dot.Size = UDim2.new(0, 2, 0, 2)
-    dot.Position = UDim2.new(0, 9 - i * 3, 0, 9 - i * 3)
-    dot.BackgroundColor3 = T.Neon
-    dot.BorderSizePixel = 0
-    dot.Parent = ResizeGrip
-    corner(dot, 1)
-end
-
-local ResizeBtn = Instance.new("TextButton")
-ResizeBtn.Size = UDim2.new(1, 0, 1, 0)
-ResizeBtn.BackgroundTransparency = 1
-ResizeBtn.Text = ""
-ResizeBtn.AutoButtonColor = false
-ResizeBtn.Parent = ResizeGrip
-
-local BallBtn = Instance.new("TextButton")
-BallBtn.Size = UDim2.new(1, 0, 1, 0)
-BallBtn.BackgroundTransparency = 1
-BallBtn.Text = "力"
-BallBtn.TextColor3 = T.BgDeep
-BallBtn.Font = T.FB
-BallBtn.TextSize = 18
-BallBtn.AutoButtonColor = false
-BallBtn.Visible = false
-BallBtn.ZIndex = 25
-BallBtn.Parent = Main
+local statStrGain = infoRow(statCard, "力量增长", T.Neon)
+local statStrRate = infoRow(statCard, "力量/秒", T.Green)
+local statStrDay = infoRow(statCard, "预计/天", T.Purple)
+local statElapsed = infoRow(statCard, "会话时长", T.TextDim)
 
 local DataPanel = Instance.new("Frame")
 DataPanel.Size = UDim2.new(0, 220, 0, 290)
@@ -1573,6 +2032,196 @@ for _, def in ipairs(STAT_DEFS) do
     DataRows[def.key] = { value = valueLbl, est = estLbl, def = def }
 end
 
+local LogPanel = Instance.new("Frame")
+LogPanel.Size = UDim2.new(0, 260, 0, 320)
+LogPanel.Position = UDim2.new(1, -290, 0.5, -160)
+LogPanel.BackgroundColor3 = T.BgDeep
+LogPanel.BorderSizePixel = 0
+LogPanel.Active = true
+LogPanel.ClipsDescendants = true
+LogPanel.Visible = false
+LogPanel.ZIndex = 40
+LogPanel.Parent = ScreenGui
+corner(LogPanel, 6)
+stroke(LogPanel, T.Green, 1.2, 0.35)
+gradientMulti(LogPanel, {
+    {0, T.BgPanel},
+    {0.5, T.BgDeep},
+    {1, Color3.fromRGB(6, 12, 20)},
+}, 135)
+cornerBrackets(LogPanel, T.Green, 8, 2)
+
+local LogHeader = Instance.new("Frame")
+LogHeader.Size = UDim2.new(1, 0, 0, 32)
+LogHeader.BackgroundColor3 = T.BgPanel
+LogHeader.BackgroundTransparency = 0.1
+LogHeader.BorderSizePixel = 0
+LogHeader.ZIndex = 3
+LogHeader.Parent = LogPanel
+
+local LogTitle = Instance.new("TextLabel")
+LogTitle.Size = UDim2.new(1, -60, 1, 0)
+LogTitle.Position = UDim2.new(0, 12, 0, 0)
+LogTitle.BackgroundTransparency = 1
+LogTitle.Text = "◆ 日志"
+LogTitle.TextColor3 = T.Green
+LogTitle.TextXAlignment = Enum.TextXAlignment.Left
+LogTitle.Font = T.FB
+LogTitle.TextSize = 10
+LogTitle.ZIndex = 5
+LogTitle.Parent = LogHeader
+
+local LogClearBtn = Instance.new("TextButton")
+LogClearBtn.Size = UDim2.new(0, 20, 0, 20)
+LogClearBtn.Position = UDim2.new(1, -48, 0.5, -10)
+LogClearBtn.BackgroundColor3 = T.RedDim
+LogClearBtn.BackgroundTransparency = 0.4
+LogClearBtn.Text = "⟲"
+LogClearBtn.TextColor3 = T.Text
+LogClearBtn.Font = T.FB
+LogClearBtn.TextSize = 11
+LogClearBtn.AutoButtonColor = false
+LogClearBtn.BorderSizePixel = 0
+LogClearBtn.ZIndex = 5
+LogClearBtn.Parent = LogHeader
+corner(LogClearBtn, 3)
+
+local LogCloseBtn = Instance.new("TextButton")
+LogCloseBtn.Size = UDim2.new(0, 20, 0, 20)
+LogCloseBtn.Position = UDim2.new(1, -24, 0.5, -10)
+LogCloseBtn.BackgroundColor3 = T.RedDim
+LogCloseBtn.BackgroundTransparency = 0.4
+LogCloseBtn.Text = "×"
+LogCloseBtn.TextColor3 = T.Text
+LogCloseBtn.Font = T.FB
+LogCloseBtn.TextSize = 12
+LogCloseBtn.AutoButtonColor = false
+LogCloseBtn.BorderSizePixel = 0
+LogCloseBtn.ZIndex = 5
+LogCloseBtn.Parent = LogHeader
+corner(LogCloseBtn, 3)
+
+local LogContent = Instance.new("ScrollingFrame")
+LogContent.Size = UDim2.new(1, 0, 1, -32)
+LogContent.Position = UDim2.new(0, 0, 0, 32)
+LogContent.BackgroundTransparency = 1
+LogContent.BorderSizePixel = 0
+LogContent.ScrollBarThickness = 2
+LogContent.ScrollBarImageColor3 = T.Green
+LogContent.ScrollBarImageTransparency = 0.4
+LogContent.ScrollingDirection = Enum.ScrollingDirection.Y
+LogContent.CanvasSize = UDim2.new(0, 0, 0, 0)
+LogContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
+LogContent.ZIndex = 2
+LogContent.Parent = LogPanel
+paddingSides(LogContent, 8, 8, 8, 8)
+
+local LogLayout = Instance.new("UIListLayout")
+LogLayout.Padding = UDim.new(0, 3)
+LogLayout.SortOrder = Enum.SortOrder.LayoutOrder
+LogLayout.Parent = LogContent
+
+local logEntryCount = 0
+local function rebuildLogUI()
+    for _, c in ipairs(LogContent:GetChildren()) do
+        if c:IsA("Frame") then c:Destroy() end
+    end
+    logEntryCount = 0
+    for _, e in ipairs(getLogs()) do
+        local r = Instance.new("Frame")
+        r.Size = UDim2.new(1, 0, 0, 0)
+        r.AutomaticSize = Enum.AutomaticSize.Y
+        r.BackgroundColor3 = T.BgPanel2
+        r.BackgroundTransparency = 0.5
+        r.Parent = LogContent
+        corner(r, 3)
+
+        local tag = Instance.new("TextLabel")
+        tag.Size = UDim2.new(0, 32, 0, 14)
+        tag.Position = UDim2.new(0, 4, 0, 2)
+        tag.BackgroundColor3 = e.color
+        tag.BackgroundTransparency = 0.7
+        tag.Text = e.tag
+        tag.TextColor3 = e.color
+        tag.Font = T.FM
+        tag.TextSize = 8
+        tag.Parent = r
+        corner(tag, 2)
+
+        local txt = Instance.new("TextLabel")
+        txt.Size = UDim2.new(1, -46, 0, 0)
+        txt.Position = UDim2.new(0, 40, 0, 2)
+        txt.AutomaticSize = Enum.AutomaticSize.Y
+        txt.BackgroundTransparency = 1
+        txt.Text = "[" .. e.time .. "] " .. e.text
+        txt.TextColor3 = T.Text
+        txt.TextXAlignment = Enum.TextXAlignment.Left
+        txt.TextYAlignment = Enum.TextYAlignment.Top
+        txt.Font = T.F
+        txt.TextSize = 9
+        txt.TextWrapped = true
+        txt.Parent = r
+
+        local pad = Instance.new("UIPadding")
+        pad.PaddingBottom = UDim.new(0, 3)
+        pad.Parent = r
+    end
+end
+
+local function appendLogUI(entry)
+    if not entry then
+        rebuildLogUI()
+        return
+    end
+    logEntryCount = logEntryCount + 1
+
+    local r = Instance.new("Frame")
+    r.Size = UDim2.new(1, 0, 0, 0)
+    r.AutomaticSize = Enum.AutomaticSize.Y
+    r.BackgroundColor3 = T.BgPanel2
+    r.BackgroundTransparency = 0.5
+    r.Parent = LogContent
+    corner(r, 3)
+
+    local tag = Instance.new("TextLabel")
+    tag.Size = UDim2.new(0, 32, 0, 14)
+    tag.Position = UDim2.new(0, 4, 0, 2)
+    tag.BackgroundColor3 = entry.color
+    tag.BackgroundTransparency = 0.7
+    tag.Text = entry.tag
+    tag.TextColor3 = entry.color
+    tag.Font = T.FM
+    tag.TextSize = 8
+    tag.Parent = r
+    corner(tag, 2)
+
+    local txt = Instance.new("TextLabel")
+    txt.Size = UDim2.new(1, -46, 0, 0)
+    txt.Position = UDim2.new(0, 40, 0, 2)
+    txt.AutomaticSize = Enum.AutomaticSize.Y
+    txt.BackgroundTransparency = 1
+    txt.Text = "[" .. entry.time .. "] " .. entry.text
+    txt.TextColor3 = T.Text
+    txt.TextXAlignment = Enum.TextXAlignment.Left
+    txt.TextYAlignment = Enum.TextYAlignment.Top
+    txt.Font = T.F
+    txt.TextSize = 9
+    txt.TextWrapped = true
+    txt.Parent = r
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingBottom = UDim.new(0, 3)
+    pad.Parent = r
+
+    task.defer(function()
+        LogContent.CanvasPosition = Vector2.new(0, LogContent.AbsoluteCanvasSize.Y)
+    end)
+
+    if logEntryCount > 300 then
+        rebuildLogUI()
+    end
+end
+
 local function openDataPanel()
     DataPanelOpen = true
     Config.DataPanelOpen = true
@@ -1589,29 +2238,51 @@ local function closeDataPanel()
     notify("数据面板已关闭", T.Red)
 end
 
+local function openLogPanel()
+    Config.LogPanelOpen = true
+    LogPanel.Visible = true
+    rebuildLogUI()
+    saveConfig()
+end
+
+local function closeLogPanel()
+    Config.LogPanelOpen = false
+    LogPanel.Visible = false
+    saveConfig()
+end
+
 DataBtn.MouseButton1Click:Connect(function()
-    if DataPanelOpen then
-        closeDataPanel()
-    else
-        openDataPanel()
-    end
+    if DataPanelOpen then closeDataPanel() else openDataPanel() end
+end)
+DataCloseBtn.MouseButton1Click:Connect(closeDataPanel)
+
+LogBtn.MouseButton1Click:Connect(function()
+    if Config.LogPanelOpen then closeLogPanel() else openLogPanel() end
+end)
+LogCloseBtn.MouseButton1Click:Connect(closeLogPanel)
+LogClearBtn.MouseButton1Click:Connect(function()
+    clearLogs()
+    rebuildLogUI()
 end)
 
-DataCloseBtn.MouseButton1Click:Connect(closeDataPanel)
+onLog(appendLogUI)
 
 if Config.DataPanelOpen then
     DataPanel.Visible = true
     DataPanelOpen = true
 end
+if Config.LogPanelOpen then
+    LogPanel.Visible = true
+end
 
-do
+local function makeDraggable(handle, target)
     local dragging, dragStart, startPos = false, nil, nil
-    DataHeader.InputBegan:Connect(function(input)
+    handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
-            startPos = DataPanel.Position
+            startPos = target.Position
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then dragging = false end
             end)
@@ -1621,13 +2292,113 @@ do
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
             or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
-            DataPanel.Position = UDim2.new(
+            target.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + delta.X,
                 startPos.Y.Scale, startPos.Y.Offset + delta.Y
             )
         end
     end)
 end
+
+makeDraggable(DataHeader, DataPanel)
+makeDraggable(LogHeader, LogPanel)
+
+local Bottom = Instance.new("Frame")
+Bottom.Size = UDim2.new(1, 0, 0, 36)
+Bottom.Position = UDim2.new(0, 0, 1, -36)
+Bottom.BackgroundColor3 = T.BgPanel
+Bottom.BackgroundTransparency = 0.1
+Bottom.BorderSizePixel = 0
+Bottom.ZIndex = 3
+Bottom.Parent = Main
+
+local bottomLine = Instance.new("Frame")
+bottomLine.Size = UDim2.new(1, 0, 0, 1)
+bottomLine.BackgroundColor3 = T.Neon
+bottomLine.BackgroundTransparency = 0.5
+bottomLine.BorderSizePixel = 0
+bottomLine.ZIndex = 4
+bottomLine.Parent = Bottom
+gradientMulti(bottomLine, {{0, T.Neon}, {0.5, T.Neon2}, {1, T.Neon}}, 0)
+
+local statusDotGlow = Instance.new("Frame")
+statusDotGlow.Size = UDim2.new(0, 10, 0, 10)
+statusDotGlow.Position = UDim2.new(0, 10, 0, 8)
+statusDotGlow.BackgroundColor3 = T.Red
+statusDotGlow.BackgroundTransparency = 0.6
+statusDotGlow.BorderSizePixel = 0
+statusDotGlow.ZIndex = 4
+statusDotGlow.Parent = Bottom
+corner(statusDotGlow, 5)
+
+local statusDot = Instance.new("Frame")
+statusDot.Size = UDim2.new(0, 5, 0, 5)
+statusDot.Position = UDim2.new(0, 12.5, 0, 10.5)
+statusDot.BackgroundColor3 = T.Red
+statusDot.BorderSizePixel = 0
+statusDot.ZIndex = 5
+statusDot.Parent = Bottom
+corner(statusDot, 3)
+
+local statusLbl = Instance.new("TextLabel")
+statusLbl.Size = UDim2.new(1, -36, 0, 11)
+statusLbl.Position = UDim2.new(0, 26, 0, 6)
+statusLbl.BackgroundTransparency = 1
+statusLbl.Text = "待机中"
+statusLbl.TextColor3 = T.Text
+statusLbl.TextXAlignment = Enum.TextXAlignment.Left
+statusLbl.Font = T.FM
+statusLbl.TextSize = 9
+statusLbl.ZIndex = 5
+statusLbl.Parent = Bottom
+
+local hintLbl = Instance.new("TextLabel")
+hintLbl.Size = UDim2.new(1, -36, 0, 11)
+hintLbl.Position = UDim2.new(0, 26, 0, 18)
+hintLbl.BackgroundTransparency = 1
+hintLbl.Text = IS_TOUCH and "// 点标题折叠" or "// 点标题 · RS 开关"
+hintLbl.TextColor3 = T.TextSub
+hintLbl.TextXAlignment = Enum.TextXAlignment.Left
+hintLbl.Font = T.FM
+hintLbl.TextSize = 7
+hintLbl.ZIndex = 5
+hintLbl.Parent = Bottom
+
+local ResizeGrip = Instance.new("Frame")
+ResizeGrip.Size = UDim2.new(0, 12, 0, 12)
+ResizeGrip.Position = UDim2.new(1, -16, 1, -16)
+ResizeGrip.BackgroundTransparency = 1
+ResizeGrip.ZIndex = 20
+ResizeGrip.Parent = Main
+
+for i = 1, 3 do
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 2, 0, 2)
+    dot.Position = UDim2.new(0, 9 - i * 3, 0, 9 - i * 3)
+    dot.BackgroundColor3 = T.Neon
+    dot.BorderSizePixel = 0
+    dot.Parent = ResizeGrip
+    corner(dot, 1)
+end
+
+local ResizeBtn = Instance.new("TextButton")
+ResizeBtn.Size = UDim2.new(1, 0, 1, 0)
+ResizeBtn.BackgroundTransparency = 1
+ResizeBtn.Text = ""
+ResizeBtn.AutoButtonColor = false
+ResizeBtn.Parent = ResizeGrip
+
+local BallBtn = Instance.new("TextButton")
+BallBtn.Size = UDim2.new(1, 0, 1, 0)
+BallBtn.BackgroundTransparency = 1
+BallBtn.Text = "力"
+BallBtn.TextColor3 = T.BgDeep
+BallBtn.Font = T.FB
+BallBtn.TextSize = 18
+BallBtn.AutoButtonColor = false
+BallBtn.Visible = false
+BallBtn.ZIndex = 25
+BallBtn.Parent = Main
 
 updateStatus = function()
     if isTraining then
@@ -1700,18 +2471,66 @@ startAutoTrain = function()
     if not TrainEvent then notify("未找到训练事件", T.Red) return end
     isTraining = true
     trainCount = 0
+    _lastSwitchAt = nil
     startTime = tick()
+    History.sessionStart = tick()
+    History.lastSample = 0
     refreshAllStats()
     if hasStatSource("Strength") then
         sessionStartStrength = getStat("Strength")
     end
+
+    if sessionLimitThread then task.cancel(sessionLimitThread) end
+    sessionLimitThread = task.spawn(function()
+        while isTraining and ScreenGui.Parent do
+            task.wait(1)
+            local elapsed = tick() - startTime
+
+            if Config.AutoSwitchAction and trainCount > 0 then
+                if not _lastSwitchAt or trainCount - _lastSwitchAt >= Config.AutoSwitchEvery then
+                    _lastSwitchAt = trainCount
+                    actionIndex = actionIndex % #Actions + 1
+                    Config.Action = Actions[actionIndex]
+                    actionBtn.Text = ActionNames[Config.Action] or Config.Action
+                end
+            end
+
+            if Config.TargetStrengthStop and Config.TargetStrength > 0 then
+                local cur = getStat("Strength")
+                if cur >= Config.TargetStrength then
+                    notify("已达目标力量 " .. fmt(Config.TargetStrength), T.Green)
+                    stopAutoTrain()
+                    updateStartBtn()
+                    updateStatus()
+                    break
+                end
+            end
+
+            if Config.SessionTimeLimitStop and Config.SessionTimeLimit > 0 then
+                if elapsed >= Config.SessionTimeLimit then
+                    notify("已达时限 " .. Config.SessionTimeLimit .. "s", T.Yellow)
+                    stopAutoTrain()
+                    updateStartBtn()
+                    updateStatus()
+                    break
+                end
+            end
+        end
+    end)
+
     trainThread = task.spawn(function()
         while isTraining and ScreenGui.Parent do
-            local ok = pcall(function() TrainEvent:FireServer(Config.Action) end)
-            if ok then
-                trainCount = trainCount + 1
-                totalCount = totalCount + 1
-                Config.TotalReps = totalCount
+            local mult = math.max(1, math.floor(Config.TrainMultiplier or 1))
+            for _ = 1, mult do
+                local ok = pcall(function() TrainEvent:FireServer(Config.Action) end)
+                if ok then
+                    trainCount = trainCount + 1
+                    totalCount = totalCount + 1
+                    Config.TotalReps = totalCount
+                end
+            end
+            if trainCount % 100 == 0 and trainCount > 0 then
+                addLog("已完成 " .. trainCount .. " 次 " .. (ActionNames[Config.Action] or Config.Action), T.GreenDim, "TRN")
             end
             task.wait(Config.Interval)
         end
@@ -1727,8 +2546,13 @@ stopAutoTrain = function()
         pcall(task.cancel, trainThread)
         trainThread = nil
     end
+    if sessionLimitThread then
+        pcall(task.cancel, sessionLimitThread)
+        sessionLimitThread = nil
+    end
     saveConfig()
     updateStatus()
+    addLog("本次训练 " .. fmtDuration(tick() - startTime) .. " · " .. trainCount .. " 次", T.Neon, "TRN")
 end
 
 startBtn.MouseButton1Click:Connect(function()
@@ -1841,15 +2665,18 @@ end
 CloseBtn.MouseButton1Click:Connect(function()
     stopAutoTrain()
     stopFly()
+    if loopThread then pcall(task.cancel, loopThread) end
+    if followThread then pcall(task.cancel, followThread) end
+    if sessionLimitThread then pcall(task.cancel, sessionLimitThread) end
     saveConfig()
     for _, c in ipairs(Connections) do pcall(function() c:Disconnect() end) end
     tween(Main, { Size = UDim2.new(0, W, 0, 0), BackgroundTransparency = 1 }, 0.3)
     tween(DataPanel, { BackgroundTransparency = 1 }, 0.3)
+    tween(LogPanel, { BackgroundTransparency = 1 }, 0.3)
     task.wait(0.35)
     if ScreenGui.Parent then ScreenGui:Destroy() end
 end)
 
--- ==================== 主循环 ====================
 task.spawn(function()
     while ScreenGui.Parent do
         local elapsed = isTraining and (tick() - startTime) or 0
@@ -1874,6 +2701,19 @@ task.spawn(function()
             rowPerRep.Text = "—"
         end
 
+        statStrGain.Text = (gain >= 0 and "+" or "") .. fmt(gain)
+        if elapsed > 0 and gain > 0 then
+            local perSec = gain / elapsed
+            statStrRate.Text = fmtRate(perSec) .. "/s"
+            statStrDay.Text = fmtRate(perSec * 86400)
+        else
+            statStrRate.Text = "—"
+            statStrDay.Text = "—"
+        end
+        statElapsed.Text = fmtDuration(elapsed)
+
+        sampleHistory()
+
         if DataPanelOpen then
             for _, def in ipairs(STAT_DEFS) do
                 local row = DataRows[def.key]
@@ -1885,7 +2725,7 @@ task.spawn(function()
                         if isTraining and elapsed > 0 and sessionStartStrength then
                             local perSec = (val - sessionStartStrength) / elapsed
                             if perSec > 0 then
-                                row.est.Text = "≈ +" .. fmt(perSec * 86400) .. " / 天"
+                                row.est.Text = "≈ +" .. fmtRate(perSec * 86400) .. " / 天"
                                 row.est.TextColor3 = T.Green
                             else
                                 row.est.Text = "—"
@@ -1898,7 +2738,7 @@ task.spawn(function()
                     elseif def.key == "Rebirth" then
                         if Config.AutoRebirth and Config.AutoRebirthDelay > 0 then
                             local perDay = 86400 / Config.AutoRebirthDelay
-                            row.est.Text = "≈ +" .. fmt(perDay) .. " / 天"
+                            row.est.Text = "≈ +" .. fmtRate(perDay) .. " / 天"
                             row.est.TextColor3 = T.Green
                         else
                             row.est.Text = "—"
@@ -1922,19 +2762,24 @@ task.spawn(function()
     end
 end)
 
--- ==================== 反挂机 ====================
 local function fireAntiAfk()
     if not Config.AntiAfk then return end
-    if pcall(function()
+    addLog("触发反挂机", T.Yellow, "AFK")
+
+    local ok1 = pcall(function()
         VirtualInputManager:SendKeyEvent(Enum.KeyCode.Space, true, false, game)
         task.wait(0.05)
         VirtualInputManager:SendKeyEvent(Enum.KeyCode.Space, false, false, game)
-    end) then return end
-    if pcall(function()
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-        task.wait(0.05)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
-    end) then return end
+    end)
+
+    if not ok1 then
+        pcall(function()
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+            task.wait(0.05)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+        end)
+    end
+
     pcall(function()
         local char = LocalPlayer.Character
         local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -1951,7 +2796,6 @@ task.spawn(function()
     end
 end)
 
--- ==================== 重生检测循环（关键：只有实际重生值增加才计数） ====================
 task.spawn(function()
     while ScreenGui.Parent do
         task.wait(0.5)
@@ -1960,13 +2804,12 @@ task.spawn(function()
             if hasStatSource("Rebirth") then
                 local cur = getStat("Rebirth")
                 if cur > pendingRebirthLastValue then
-                    -- 检测到重生值增加 → 计数 +1
                     pendingRebirth = false
                     Config.AutoRebirthDone = Config.AutoRebirthDone + 1
                     saveConfig()
                     if updateRebirthDisplay then updateRebirthDisplay() end
+                    addLog("重生成功 · 总计 " .. Config.AutoRebirthDone, T.Purple, "RBT")
                 elseif tick() - pendingRebirthStart > REBIRTH_TIMEOUT then
-                    -- 超时未检测到，放弃本次
                     pendingRebirth = false
                     notify("重生超时（未检测到）", T.Red)
                 end
@@ -1977,7 +2820,6 @@ task.spawn(function()
     end
 end)
 
--- ==================== 自动重生循环 ====================
 task.spawn(function()
     while ScreenGui.Parent do
         task.wait(Config.AutoRebirthDelay)
@@ -1989,14 +2831,15 @@ task.spawn(function()
                 if Config.AutoRebirth then
                     Config.AutoRebirth = false
                     saveConfig()
+                    if arRefresh then arRefresh() end
                     notify("已达成目标 " .. target .. " 次", T.Green)
+                    addLog("自动重生达标停止", T.Purple, "RBT")
                 end
             else
                 refreshAllStats()
                 local hasRebirthStat = hasStatSource("Rebirth")
 
                 if hasRebirthStat then
-                    -- 有重生数据源 → 记录当前值，等待检测
                     pendingRebirthLastValue = getStat("Rebirth")
                     pendingRebirth = true
                     pendingRebirthStart = tick()
@@ -2007,7 +2850,6 @@ task.spawn(function()
                 pcall(function() RebirthEvent:FireServer("Update") end)
 
                 if not hasRebirthStat then
-                    -- 无重生数据源 → 退化为立即计数
                     Config.AutoRebirthDone = done + 1
                     saveConfig()
                     if updateRebirthDisplay then updateRebirthDisplay() end
@@ -2017,7 +2859,6 @@ task.spawn(function()
     end
 end)
 
--- ==================== 自动重置 ====================
 task.spawn(function()
     while ScreenGui.Parent do
         task.wait(Config.AutoResetInterval)
@@ -2033,7 +2874,6 @@ task.spawn(function()
     end
 end)
 
--- ==================== 键盘快捷键 ====================
 track(UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.KeyCode == Enum.KeyCode.Insert then
@@ -2050,14 +2890,19 @@ track(UserInputService.InputBegan:Connect(function(input, processed)
         updateStatus()
     elseif input.KeyCode == Enum.KeyCode.Delete then
         if DataPanelOpen then closeDataPanel() else openDataPanel() end
+    elseif input.KeyCode == Enum.KeyCode.End then
+        if Config.LogPanelOpen then closeLogPanel() else openLogPanel() end
     end
 end))
 
--- ==================== 初始化 ====================
 updateStartBtn()
 updateStatus()
 refreshAllStats()
 applyWalkSpeed()
+
+addLog("系统启动 v2.0", T.Neon, "SYS")
+addLog("日志上限 " .. Config.LogMaxLines .. " 条", T.TextDim, "SYS")
+addLog("采样间隔 " .. Config.HistorySampleRate .. "s", T.TextDim, "SYS")
 
 if Config.AutoStart then
     startAutoTrain()
@@ -2076,4 +2921,4 @@ if Config.MinimizeOnStart then
     task.defer(collapse)
 end
 
-notify("力量之冠 v1.0 — 已启动", T.Neon)
+notify("力量之冠 v2.0 — 已启动", T.Neon)
