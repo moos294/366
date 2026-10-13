@@ -2063,35 +2063,35 @@ CloseBtn.MouseButton1Click:Connect(function()
     stopAutoTrain()
     stopFly()
     saveConfig()
-    for _, c in ipairs(Connections) do pcall(function() c:Disconnect() end) end
-    tween(Main, { Size = UDim2.new(0, W, 0, 0), BackgroundTransparency = 1 }, 0.3)
-    tween(DataPanel, { BackgroundTransparency = 1 }, 0.3)
+    for _, c in ipairs(Connections) 做 pcall(功能c：断开（）结束) 结束
+tween(Main, { Size = UDim2.new(0, W,0, 0), BackgroundTransparency =1 }, 0.3)
+吐温DataPanel，{backgroundtractivity=1 }, 0.3)
     task.wait(0.35)
-    if ScreenGui.Parent then ScreenGui:Destroy() end
-end)
+    如果 ScreenGui.Parent 然后 ScreenGui:Destroy() 结束
+结束)
 
-task.spawn(function()
-    while ScreenGui.Parent do
-        local elapsed = isTraining and (tick() - startTime) or 0
-        local aps = elapsed > 0 and (trainCount / elapsed) or 0
-        statSession.Text = tostring(trainCount)
-        statTotal.Text = tostring(totalCount)
-        statRate.Text = string.format("%.2f", aps)
+task.spawn(功能()
+    而 ScreenGui.Parent 做
+        当地的elapsed = isTraining和（滴答（）-开始时间）或 0
+        当地的aps = elapsed >0 和（列车计数/已过）或 0
+statSession.Text = tostring(trainCount)
+statTotal.Text = tostring(totalCount)
+statRate.Text = string.format("%.2f", aps)
 
         refreshAllStats()
-        local curStrength = getStat("Strength")
-        if sessionStartStrength == nil then sessionStartStrength = curStrength end
-        local gain = curStrength - sessionStartStrength
+        当地的curStrength = getStat("Strength")
+        如果sessionStartStrength ==无 然后sessionStartStrength = curStrength结束
+        当地的gain = curStrength - sessionStartStrength
 
-        rowStrength.Text = fmt(curStrength)
-        rowSession.Text = (gain >= 0 and "+" or "") .. fmt(gain)
-        rowBefore.Text = fmt(sessionStartStrength)
-        rowSession.TextColor3 = gain > 0 and T.Green or (gain < 0 and T.Red or T.Text)
+rowStrength.Text = fmt(curStrength)
+rowSession.Text = (gain >=0 和 "+" 或 "") .. fmt(gain)
+rowBefore.Text = fmt(sessionStartStrength)
+rowSession.TextColor3 = gain >0 和 T.Green 或(gain <0 和 T.Red 或 T.Text)
 
-        if trainCount > 0 and gain > 0 then
-            rowPerRep.Text = string.format("%.2f", gain / trainCount)
-        else
-            rowPerRep.Text = "\226\128\148"
+        如果列车计数>0 和gain >0 然后
+rowPerRep.Text = string.format("%.2f", gain / trainCount)
+        其他的
+rowPerRep.Text ="\226\128\148"
         end
 
         if DataPanelOpen then
@@ -2211,58 +2211,58 @@ task.spawn(function()
                 local hasRebirthStat = hasStatSource("Rebirth")
 
                 if hasRebirthStat then
-                    pendingRebirthLastValue = getStat("Rebirth")
-                    pendingRebirth = true
-                    pendingRebirthStart = tick()
-                end
+pendingRebirthLastValue = getStat("Rebirth")
+pendingRebirth =真正的
+pendingRebirthStart = tick()
+                结束
 
-                pcall(function() RebirthEvent:FireServer("Start") end)
+pcall（功能（）RebirthEvent:FireServer（"Start") 结束)
                 task.wait(0.5)
-                pcall(function() RebirthEvent:FireServer("Update") end)
+pcall（功能（）RebirthEvent:FireServer（"Update") 结束)
 
-                if not hasRebirthStat then
-                    Config.AutoRebirthDone = done + 1
+如果已经出生了
+Config.AutoRebirthDone = done +1
                     saveConfig()
-                    if updateRebirthDisplay then updateRebirthDisplay() end
-                end
-            end
-        end
-    end
-end)
+如果显示然后更新显示（）
+结束
+结束
+结束
+结束
+结束)
 
-task.spawn(function()
-    while ScreenGui.Parent do
+task.spawn功能（）
+而 ScreenGui.Parent
         task.wait(Config.AutoResetInterval)
-        if Config.AutoReset then
-            pcall(function()
-                local char = LocalPlayer.Character
-                if char then
-                    local hum = char:FindFirstChildOfClass("Humanoid")
-                    if hum then hum.Health = 0 else char:BreakJoints() end
-                end
-            end)
-        end
-    end
-end)
+如果 Config.AutoReset
+pcall（功能（）
+当地的 Char=LocalPlayer
+如果茶然后
+当地的 hum=char:FindFirstChildOfClass"Humanoid")
+如果嗡嗡声然后哼0其他的 char：you（）
+结束
+结束)
+如果已经加工过了
+结束
+结束
 
-track(UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode.Insert then
-        Main.Visible = not Main.Visible
-    elseif input.KeyCode == Enum.KeyCode.RightShift then
-        if isTraining then
-            stopAutoTrain()
+结束)
+track（UserInputService.Inputbegin:Connect）功能（输入，已处理）
+track（UserInputService.Inputbegin:Connect）功能（输入，已处理）
+Visible=不 Main. Visible如果 input. KeyCode====enuum. KeyCode. Insert bly
+如果输入。KeyCode====enuum。密码。插入bly
+否则如果输入。KeyCode====enuum。密码。右移你
+如果
             notify("\232\174\173\231\187\131\229\183\178\229\129\156\230\173\162", T.Red)
-        else
+其他的
             startAutoTrain()
-            if isTraining then notify("\232\174\173\231\187\131\229\183\178\229\188\128\229\167\139", T.Green) end
-        end
+如果我想通知"\232\174\173\231\187\131\229\183\178\229\188\128\229\167\139"结束
+结束
         updateStartBtn()
         updateStatus()
-    elseif input.KeyCode == Enum.KeyCode.Delete then
-        if DataPanelOpen then closeDataPanel() else openDataPanel() end
-    end
-end))
+否则如果输入. KeyCode====enuum.
+结束
+如果 Config.Fly
+task.defer功能（）
 
 updateStartBtn()
 updateStatus()
@@ -2270,21 +2270,21 @@ refreshAllStats()
 applyWalkSpeed()
 refreshPlayerList()
 
-if Config.AutoStart then
+如果是_TOUCH you
     startAutoTrain()
     updateStartBtn()
     updateStatus()
-end
+结束)
 
-if Config.Fly then
-    task.defer(function()
-        startFly()
-        if IS_TOUCH then FlyControls.Visible = true end
-    end)
-end
+结束
+如果 DataPanelOpen you closeDataPanel(）you Lio openDataPanel(）
+如果 Config.MinimizeOnStart
+结束
+结束))
+如果 Config.AutoStart
 
-if Config.MinimizeOnStart then
+如果 DataPanelOpen you closeDataPanel(）you Lio openDataPanel(）否则如果输入. KeyCode====enuum
     task.defer(collapse)
-end
+结束
 
-notify("\229\138\155\233\135\143\228\185\139\229\134\160 v2.0 \226\128\148 \229\183\178\229\144\175\229\138\168", T.Neon)
+结束））
